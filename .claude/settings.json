@@ -6,7 +6,9 @@
       "Bash(brew --version)",
       "Bash(pyenv install *)",
       "Bash(pyenv local *)",
-      "Bash(/Users/hafang/.pyenv/versions/3.12.10/bin/python --version)"
+      "Bash(/Users/hafang/.pyenv/versions/3.12.10/bin/python --version)",
+      "Bash(.venv/bin/python -c ' *)",
+      "Bash(/Users/hafang/Desktop/oss/.venv/bin/python -c \"from summariesandflashcards.ollama_client import list_models; print\\(list_models\\(\\)\\)\")"
     ]
   }
 }
