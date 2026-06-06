@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pyenv versions *)",
+      "Bash(pyenv which *)",
+      "Bash(brew --version)",
+      "Bash(pyenv install *)",
+      "Bash(pyenv local *)",
+      "Bash(/Users/hafang/.pyenv/versions/3.12.10/bin/python --version)"
+    ]
+  }
+}
