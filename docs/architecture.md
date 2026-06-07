@@ -165,3 +165,17 @@ def _fix_latex(text):
 ```
 
 The conversion runs after `st.write_stream()` returns (the streaming display shows raw delimiters; the DONE-stage tabs show rendered math).
+
+---
+
+## Flashcards (`summariesandflashcards/flashcards.py`)
+
+On-demand in the DONE stage (a "Generate flashcards" button — it's an extra LLM pass, so not automatic).
+
+**Grounding.** Cards are generated from the **finished summary**, not the raw source. The summary is already gated (Gate A/B) and faithful, so cards derived from it inherit that faithfulness. Generation is **one call per summary topic** (the `parts` split on `\n\n---\n\n`) — small focused calls produce valid JSON far more reliably on a 3B model than one large call, and each call sees only its topic. `flashcard_prompt` restricts the model to facts in the supplied text; `temperature: 0`.
+
+**Parsing.** `_parse_cards` tries strict `json.loads` on the first `[...]` array, then falls back to a regex (`_PAIR_RE`) that recovers `"q"/"a"` pairs directly — necessary because 3B models emit structurally-broken-but-recoverable JSON (stray `}}`, trailing commas). `_generate_for_text` retries once per part; unparseable parts are skipped, never fatal. Cards are deduped by question and capped at `max_total`.
+
+**Export.** `build_apkg` builds a `genanki.Deck` (fixed `_MODEL_ID`/`_DECK_ID` so Anki recognises the model/deck across imports) and writes it. genanki only writes to a path, so it round-trips through a temp `.apkg` and returns the bytes; the bytes are pre-built at generation time and stored in session state so the `st.download_button(on_click="ignore")` neither rebuilds nor reruns.
+
+**Known limitation.** Grounding is prompt-level only, so the model can still make a small inferential leap beyond the summary (e.g. inferring "English" for IMDB reviews). Milder than free fabrication; a per-card verification pass against the summary is a possible future addition.

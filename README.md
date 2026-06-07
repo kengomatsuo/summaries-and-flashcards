@@ -2,8 +2,8 @@
 
 AI-powered lecture notes summariser — fully local, no internet required, no paid API.
 
-Upload your notes (PDF, DOCX, PPTX, and more), get a concise summary, a stats
-dashboard, and exportable Anki flashcards — all running on your own machine.
+Upload your notes (PDF, DOCX, PPTX, and more), get a faithful summary and
+exportable Anki flashcards — all running on your own machine.
 
 ---
 

@@ -126,3 +126,25 @@ def summary_prompt(text: str, depth: str, proficiency: str = "Intermediate") -> 
         f"{_PREAMBLE}\n{instruction}\n\n{audience}\n\n---\n\n{text}"
         "\n\n---\n\nSummary of the lecture theory:"
     )
+
+
+def flashcard_prompt(text: str, n: int) -> str:
+    """Ask the model for up to `n` Q&A flashcards grounded strictly in `text`.
+
+    Output contract: a bare JSON array of {"q","a"} objects, no prose, no fences.
+    """
+    return (
+        "You create Anki flashcards from a study summary.\n\n"
+        f"Create up to {n} question/answer pairs that test the key facts in the SUMMARY below.\n"
+        "STRICT RULES:\n"
+        "1. Use ONLY facts stated in the summary. Do not add outside knowledge, definitions, or examples not present.\n"
+        f"2. If the summary is too thin for {n} good cards, make fewer. Quality over quantity.\n"
+        "3. Each question must be specific and answerable from the summary alone. Each answer is concise — a phrase or a single sentence.\n"
+        "4. Do not write questions about the document structure (e.g. 'what is step 3') — ask about the concept itself.\n"
+        "5. Output ONLY a JSON array and nothing else — no prose, no markdown code fences. "
+        'Format: [{"q": "...", "a": "..."}, ...]\n\n'
+        "SUMMARY:\n---\n"
+        f"{text}\n"
+        "---\n\n"
+        "JSON array:"
+    )

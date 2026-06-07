@@ -4,6 +4,7 @@ from ollama import Client
 from summariesandflashcards import ollama_client, ingest
 from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, TEXT_MODEL, OLLAMA_HOST
 from summariesandflashcards import summarize
+from summariesandflashcards import flashcards
 from summariesandflashcards.ollama_client import is_vision_model
 from summariesandflashcards.history import append_run, load_history
 
@@ -278,6 +279,7 @@ elif st.session_state.stage == "done":
             for key in [
                 "stage", "file_data", "last_summary",
                 "selected_model", "summary_depth", "proficiency", "group_labels",
+                "flashcards", "flashcards_apkg",
             ]:
                 st.session_state.pop(key, None)
             st.rerun()
@@ -333,3 +335,31 @@ elif st.session_state.stage == "done":
             mime="text/plain",
             use_container_width=True,
         )
+
+    # ── Flashcards (on-demand) ─────────────────────────────────────────────────
+    st.divider()
+    st.markdown("**Flashcards**")
+    st.caption("Anki Q&A cards generated from the summary above — grounded in its facts only.")
+
+    if st.button("🃏 Generate flashcards", use_container_width=True):
+        with st.spinner("Generating flashcards…"):
+            cards = flashcards.generate_cards(parts)
+            st.session_state.flashcards = cards
+            st.session_state.flashcards_apkg = flashcards.build_apkg(cards) if cards else b""
+
+    cards = st.session_state.get("flashcards")
+    if cards:
+        st.caption(f"{len(cards)} cards")
+        for i, (q, a) in enumerate(cards, 1):
+            with st.expander(f"{i}.  {q}"):
+                st.markdown(a)
+        st.download_button(
+            "⬇ Download deck (.apkg)",
+            data=st.session_state.get("flashcards_apkg", b""),
+            file_name="flashcards.apkg",
+            mime="application/octet-stream",
+            on_click="ignore",
+            use_container_width=True,
+        )
+    elif cards is not None:
+        st.warning("Couldn't generate flashcards from this summary. Try again.")
