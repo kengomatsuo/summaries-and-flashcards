@@ -20,7 +20,35 @@ from markitdown import MarkItDown, StreamInfo
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 
-from summariesandflashcards.config import VISION_RASTER_DPI
+from PIL import Image
+
+from summariesandflashcards.config import (
+    VISION_RASTER_DPI,
+    VISION_MAX_PX,
+    VISION_NUM_PREDICT,
+    MIN_IMAGE_PX,
+    BIG_IMAGE_PX,
+    TEXT_RICH_WORDS,
+)
+
+
+def _to_vision_b64(img_bytes: bytes) -> str:
+    """Downscale an image to VISION_MAX_PX (max dimension) → base64 PNG.
+
+    A vision model tiles an image into patches; fewer patches = much faster
+    inference. Slide/page content stays legible after downscaling. Falls back to
+    the raw bytes if PIL can't read the image.
+    """
+    try:
+        im = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        if max(im.size) > VISION_MAX_PX:
+            ratio = VISION_MAX_PX / max(im.size)
+            im = im.resize((max(1, round(im.size[0] * ratio)), max(1, round(im.size[1] * ratio))))
+        buf = io.BytesIO()
+        im.save(buf, "PNG")
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return base64.b64encode(img_bytes).decode()
 from summariesandflashcards.prompts import vision_prompt
 
 if TYPE_CHECKING:
@@ -69,7 +97,7 @@ def _vision_describe(client: "Client", model: str, img_b64: str, existing_text: 
                 "content": prompt,
                 "images": [img_b64],
             }],
-            options={"num_predict": 1000, "temperature": 0},
+            options={"num_predict": VISION_NUM_PREDICT, "temperature": 0},
             stream=False,
         )
         return response["message"]["content"].strip()
@@ -118,18 +146,23 @@ def _extract_pdf(
 
     for page_idx, page in enumerate(doc):
         text = _clean(page.get_text())
-        has_images = len(page.get_images()) > 0
         text_ok = bool(_MEANINGFUL_RE.search(text))
         # Equations typeset as PDF vector text pass _MEANINGFUL_RE (they
         # contain real words like "velocity") but produce a high ratio of
         # single-char tokens (operators, isolated symbols, numbers).
         equation_heavy = _noise_ratio(text) > 0.35
+        # Only a *significant* image triggers vision — a tiny per-page logo
+        # shouldn't force a full-page vision call on every text page.
+        has_large_image = any(
+            max(im.get("width", 0), im.get("height", 0)) >= MIN_IMAGE_PX
+            for im in page.get_image_info()
+        )
 
-        use_vision = vision_model and client and (has_images or not text_ok or equation_heavy)
+        use_vision = vision_model and client and (has_large_image or not text_ok or equation_heavy)
 
         if use_vision:
             pix = page.get_pixmap(dpi=VISION_RASTER_DPI)
-            img_b64 = base64.b64encode(pix.tobytes("png")).decode()
+            img_b64 = _to_vision_b64(pix.tobytes("png"))
             description = _vision_describe(client, vision_model, img_b64, text if text_ok else "")
             content = description
             if text_ok:
@@ -176,7 +209,7 @@ def _extract_pptx(
 
     for slide_idx, slide in enumerate(slide_list):
         text_parts: list[str] = []
-        image_descriptions: list[str] = []
+        pictures = []
 
         for shape in slide.shapes:
             # Text frames
@@ -193,15 +226,32 @@ def _extract_pptx(
                     if cells:
                         text_parts.append(" | ".join(cells))
 
-            # Pictures
-            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE and vision_model and client:
-                img_b64 = base64.b64encode(shape.image.blob).decode()
+            # Pictures — collected, described selectively below
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                pictures.append(shape)
+
+        # Vision is the slow part — only describe images that carry content:
+        # skip decorative (small) images, and on text-rich slides skip
+        # supplementary images while always describing large figures/equations.
+        slide_words = sum(len(p.split()) for p in text_parts)
+        image_descriptions: list[str] = []
+        if vision_model and client:
+            for shape in pictures:
+                try:
+                    w, h = shape.image.size
+                except Exception:
+                    continue
+                big_dim = max(w, h)
+                if big_dim < MIN_IMAGE_PX:
+                    continue  # decorative icon/logo
+                if slide_words >= TEXT_RICH_WORDS and big_dim < BIG_IMAGE_PX:
+                    continue  # supplementary image on a text-rich slide
+                img_b64 = _to_vision_b64(shape.image.blob)
                 desc = _vision_describe(client, vision_model, img_b64)
                 image_descriptions.append(f"[Image: {desc}]")
 
         slide_parts = [p for p in text_parts if p]
-        if image_descriptions:
-            slide_parts.extend(image_descriptions)
+        slide_parts.extend(image_descriptions)
 
         content = "\n".join(slide_parts).strip()
         if content:
@@ -221,7 +271,7 @@ def _extract_image(file_bytes: bytes, vision_model: str = "", client: "Client | 
     """Describe a standalone image file using the vision model."""
     if not (vision_model and client):
         return ""
-    img_b64 = base64.b64encode(file_bytes).decode()
+    img_b64 = _to_vision_b64(file_bytes)
     return _vision_describe(client, vision_model, img_b64)
 
 

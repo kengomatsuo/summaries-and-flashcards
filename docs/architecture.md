@@ -23,7 +23,7 @@ Summaries and Flashcards/
 
 `app.py` is a single tidy file built as an **app shell**: a persistent **sidebar** (`render_sidebar`) plus a **main canvas** that `main()` swaps on `st.session_state.stage`. Helpers are small and focused (`_require_ready`, `_reset`, `_load_run`, `_render_summary`, `_render_flashcards`, `_extract`, and a `_ProgressView` class for the live pipeline panels). Result state lives under a fixed set of session keys (`_RESULT_KEYS`), cleared by `_reset()`.
 
-**Sidebar (always visible):** wordmark + "Local · offline" status, a **＋ New summary** button (`_reset`), the **Library** (every `history.json` run as a button → `_load_run` loads it into the canvas; the active run is marked), and a model-pair status line. This separates controls/navigation from output — the recommended pattern for non-trivial Streamlit apps. A single injected stylesheet, `_APP_CSS`, handles the few things native theming can't: it pins the sidebar to viewport height (full-height flex column; the Library — wrapped in `st.container(key="library_scroll")` — is `flex: 1` with `overflow-y: auto` and a hidden scrollbar, so the header/status stay put and only the run list scrolls); it makes Library items left-aligned single-line rows that ellipsis on overflow; and it restyles the Download `st.popover` (items wrapped in `st.container(key="dl_menu")`) into a flat dropdown menu. All selectors use stable `data-testid`s plus `.st-key-*` classes (from container `key`s) — no emotion-hash selectors.
+**Sidebar (always visible):** wordmark, a **＋ New summary** button (`_reset`), the **Library** (every `history.json` run as a button → `_load_run` loads it into the canvas; the active run is shaded; a still-running run shows as a disabled in-progress row), and a model-pair status line. This separates controls/navigation from output — the recommended pattern for non-trivial Streamlit apps. A single injected stylesheet, `_APP_CSS`, handles the few things native theming can't: it pins the sidebar to viewport height (full-height flex column; the Library — wrapped in `st.container(key="library_scroll")` — is `flex: 1` with `overflow-y: auto` and a hidden scrollbar, so the header/status stay put and only the run list scrolls); it makes Library items left-aligned single-line rows that ellipsis on overflow; and it restyles the Download `st.popover` (items wrapped in `st.container(key="dl_menu")`) into a flat dropdown menu. All selectors use stable `data-testid`s plus `.st-key-*` classes (from container `key`s) — no emotion-hash selectors.
 
 **Main canvas:**
 
@@ -37,7 +37,7 @@ idle → running → done
 | **running** | `render_running` | Vision extract → unload → text summarise; `_ProgressView` updates expander panels live; `st.write_stream()` streams the summary token-by-token. |
 | **done** | `render_done` | Result header (file names · "AI-generated · fully local" badge · a `st.popover` for `.md`/`.txt` downloads) then two top-level tabs — **Summary** (per-topic `selectbox` + content) and **Flashcards** (flip deck + `.apkg`). |
 
-Transition `running → done`: the assembled summary is post-processed by `_fix_latex()`, persisted via `append_run()` (returns the run `id`), stored in `session_state`, then `st.rerun()` switches stage to `done`.
+**Run lifecycle in history.** On **Summarise**, `history.start_run()` inserts a placeholder run *immediately* (empty `summary` = running) and returns its `id`, so it appears in the Library on the very next rerun — before the pipeline runs (`render_sidebar` executes, and Streamlit flushes it, ahead of the blocking `render_running`). When the pipeline finishes, `history.finish_run(id, summary, labels)` fills it in (summary post-processed by `_fix_latex()`); `st.rerun()` then switches to `done`. If extraction yields nothing, `history.delete_run(id)` removes the placeholder so there's no orphan. And once per session at startup, `history.clear_stale_runs()` drops any placeholder left running by a previously-killed process (it runs before the session starts its own run, so it never touches an active one).
 
 The layout follows researched UX guidance: controls/library in the sidebar, results in the main canvas; the result header makes it explicit the summary is **AI-generated** and shows its **source files** (transparency + scope clarity for AI-generated content).
 
@@ -71,7 +71,7 @@ All LLM calls (vision describe, skim, group, write) run at `temperature: 0` for 
 
 A page is rasterised (DPI controlled by `VISION_RASTER_DPI = 150` in config) and described by the vision model when **any** condition is true:
 
-1. `page.get_images()` is non-empty — the page embeds raster images
+1. **A significant image is present** — some image on the page has a dimension ≥ `MIN_IMAGE_PX` (via `page.get_image_info()`). A tiny per-page logo no longer triggers a needless full-page vision call.
 2. No word of ≥5 alphabetic chars (`_MEANINGFUL_RE`) — text is garbled or absent
 3. `_noise_ratio(text) > 0.35` — more than 35% of whitespace-separated tokens are ≤2 chars (equation-heavy pages)
 
@@ -79,7 +79,15 @@ The noise ratio catches equations typeset as PDF vector text — they contain re
 
 ### PPTX vision
 
-Picture shapes (`shape.shape_type == MSO_SHAPE_TYPE.PICTURE`) are described individually. Text frames and table cells are extracted as plain text alongside the descriptions.
+Text frames and table cells are extracted as plain text. A picture shape is described by the vision model only when it carries content: its intrinsic size is ≥ `MIN_IMAGE_PX` (skips decorative icons/logos), and on a text-rich slide (≥ `TEXT_RICH_WORDS`) only large figures (≥ `BIG_IMAGE_PX`) are described — supplementary images on text-heavy slides are skipped. Native PowerPoint equations (OMML) aren't extracted by python-pptx and can't be rasterised, so they're a known blind spot; pasted equation *images* are covered by the size rule.
+
+### Vision performance
+
+Vision is the slow part of ingest (a few seconds per call, CPU-bound), and **parallelism does not help**: Ollama serialises requests on a single-GPU/CPU box (measured ~1.0× from concurrency; `OLLAMA_NUM_PARALLEL` auto-selects 1 on low RAM, and forcing more multiplies memory). So speed comes from doing *less* vision work, not concurrent work:
+
+- **Downscaling** — `_to_vision_b64()` shrinks every image to `VISION_MAX_PX` (max dimension, default 768) before the call. A vision model tiles an image into patches, so fewer pixels = far fewer patches = much faster (≈1.8× at 768, ≈3–4× at 512), with negligible quality loss for slide/page content. **The biggest lever.**
+- **Fewer calls** — the size / text-rich gates above skip decorative and supplementary images.
+- **Token cap** — `VISION_NUM_PREDICT = 400` bounds runaway descriptions (most are well under this, so it mainly guards outliers).
 
 ### Output format
 

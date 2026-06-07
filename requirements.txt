@@ -8,3 +8,4 @@ latex2mathml==3.81.0
 tiktoken==0.13.0
 pymupdf
 python-pptx
+pillow

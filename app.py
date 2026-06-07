@@ -17,7 +17,9 @@ from ollama import Client
 from summariesandflashcards import ollama_client, ingest, summarize, flashcards
 from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, TEXT_MODEL, OLLAMA_HOST
 from summariesandflashcards.ollama_client import is_vision_model
-from summariesandflashcards.history import append_run, save_flashcards, load_history
+from summariesandflashcards.history import (
+    start_run, finish_run, delete_run, clear_stale_runs, save_flashcards, load_history,
+)
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 _SUMMARY_HEIGHT = 520
@@ -168,8 +170,16 @@ def render_sidebar() -> None:
             active = st.session_state.get("run_id")
             for i, run in enumerate(runs):
                 is_active = bool(run.get("id")) and run.get("id") == active
-                if st.button(
-                    _files_label(run["files"]),
+                running = not run.get("summary")  # placeholder from start_run
+                label = _files_label(run["files"])
+                if running:
+                    # In-progress: shown immediately, not yet viewable.
+                    st.button(
+                        f"{label}  ·  …", key=f"lib_{i}",
+                        use_container_width=True, disabled=True,
+                    )
+                elif st.button(
+                    label,
                     key="lib_active" if is_active else f"lib_{i}",
                     use_container_width=True,
                 ):
@@ -207,6 +217,11 @@ def render_idle() -> None:
         st.session_state.file_data = [
             {"name": f.name, "bytes": f.getvalue()} for f in ordered
         ]
+        # Register the run immediately so it shows in the Library right away,
+        # then fill it in when the pipeline finishes (Claude-Code-style).
+        st.session_state.run_id = start_run(
+            [d["name"] for d in st.session_state.file_data], DEFAULT_MODEL, _DEPTH, _LEVEL
+        )
         st.session_state.stage = "running"
         st.rerun()
 
@@ -302,6 +317,7 @@ def render_running(models: list[str]) -> None:
     view = _ProgressView()
     extracted = _extract(file_data, vision_enabled, vision_client, progress)
     if not extracted:
+        delete_run(st.session_state.get("run_id", ""))  # no orphan "running" entry
         st.error("No text could be extracted from the uploaded files.")
         if st.button("↩ Start over"):
             _reset()
@@ -332,14 +348,10 @@ def render_running(models: list[str]) -> None:
     st.session_state.last_summary = summary
     st.session_state.pop("flashcards", None)
     st.session_state.pop("flashcards_apkg", None)
-    try:
-        st.session_state.run_id = append_run(
-            files=[d["name"] for d in file_data], model=DEFAULT_MODEL,
-            depth=_DEPTH, proficiency=_LEVEL, summary=summary,
-            group_labels=st.session_state.get("group_labels", []),
-        )
-    except Exception:
-        st.session_state.run_id = ""
+    finish_run(
+        st.session_state.get("run_id", ""), summary,
+        st.session_state.get("group_labels", []),
+    )
     st.session_state.stage = "done"
     st.rerun()
 
@@ -428,6 +440,12 @@ def main() -> None:
     )
     models = _require_ready()
     st.session_state.setdefault("stage", "idle")
+
+    # Once per session, before this session starts its own run: drop in-progress
+    # placeholders orphaned by a previously-killed process.
+    if not st.session_state.get("_swept"):
+        clear_stale_runs()
+        st.session_state["_swept"] = True
 
     st.markdown(_APP_CSS, unsafe_allow_html=True)
     render_sidebar()

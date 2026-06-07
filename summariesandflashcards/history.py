@@ -16,15 +16,12 @@ def _save(history: list[dict]) -> None:
         json.dump(history, f, indent=2, ensure_ascii=False)
 
 
-def append_run(
-    files: list[str],
-    model: str,
-    depth: str,
-    proficiency: str,
-    summary: str,
-    group_labels: list[str] | None = None,
-) -> str:
-    """Insert a new run at the front of history. Returns the run's unique id."""
+def start_run(files: list[str], model: str, depth: str, proficiency: str) -> str:
+    """Insert a placeholder run at the front *immediately* (on Summarise press).
+
+    The empty `summary` marks it as still running; `finish_run` fills it in when
+    the pipeline completes. Returns the run's unique id.
+    """
     history = load_history()
     run_id = uuid.uuid4().hex
     history.insert(0, {
@@ -34,13 +31,47 @@ def append_run(
         "model": model,
         "depth": depth,
         "proficiency": proficiency,
-        "summary": summary,
-        "group_labels": group_labels or [],
-        "flashcards": [],   # [{"q","a"}, ...] — generated once from the summary
+        "summary": "",         # empty = running; set by finish_run
+        "group_labels": [],
+        "flashcards": [],      # [{"q","a"}, ...] — generated once from the summary
     })
-    history = history[:_MAX_RUNS]
-    _save(history)
+    _save(history[:_MAX_RUNS])
     return run_id
+
+
+def finish_run(run_id: str, summary: str, group_labels: list[str] | None = None) -> None:
+    """Fill in a started run's summary when the pipeline completes (best-effort)."""
+    if not run_id:
+        return
+    history = load_history()
+    entry = next((r for r in history if r.get("id") == run_id), None)
+    if entry is None:
+        return
+    entry["summary"] = summary
+    entry["group_labels"] = group_labels or []
+    _save(history)
+
+
+def delete_run(run_id: str) -> None:
+    """Remove a run (e.g. a started run whose extraction produced nothing)."""
+    if not run_id:
+        return
+    history = load_history()
+    pruned = [r for r in history if r.get("id") != run_id]
+    if len(pruned) != len(history):
+        _save(pruned)
+
+
+def clear_stale_runs() -> None:
+    """Drop in-progress placeholders (empty summary) left behind by a killed run.
+
+    Run once at startup, before the session starts its own run, so it only ever
+    removes orphans from a previous process — never an active run.
+    """
+    history = load_history()
+    pruned = [r for r in history if r.get("summary")]
+    if len(pruned) != len(history):
+        _save(pruned)
 
 
 def save_flashcards(run_id: str, cards: list[tuple[str, str]]) -> None:

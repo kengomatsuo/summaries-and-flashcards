@@ -28,6 +28,18 @@ SUGGESTED_VISION_MODELS = [
 # DPI used when rasterising a PDF page for the vision model.
 VISION_RASTER_DPI = 150
 
+# Vision speedups — fewer/cheaper vision calls (Ollama serialises requests, so
+# parallelism doesn't help; cutting work does).
+# Biggest lever: a vision model tiles an image into patches, so a large image is
+# much slower. Downscaling to VISION_MAX_PX before the call is ~4x faster at 512,
+# ~1.6x at 768, with negligible quality loss for slide/page content. Lower for
+# more speed; raise if dense equations/small text look blurry to the model.
+VISION_MAX_PX = 768
+VISION_NUM_PREDICT = 400   # token budget per image/page description (was 1000)
+MIN_IMAGE_PX = 128         # images smaller than this (max dimension) are decorative → skip vision
+BIG_IMAGE_PX = 300         # at/above this → always describe (figures, equation images)
+TEXT_RICH_WORDS = 40       # slide text word count above which supplementary images are skipped
+
 SUPPORTED_EXTENSIONS = [
     "pdf", "docx", "pptx", "xlsx", "xls",
     "txt", "md", "html", "htm", "csv", "json",
