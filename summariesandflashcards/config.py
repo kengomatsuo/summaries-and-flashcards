@@ -1,15 +1,25 @@
 OLLAMA_HOST = "http://localhost:11434"
 
-DEFAULT_MODEL = "llama3.2:3b"
+DEFAULT_MODEL = "qwen2.5vl:3b"
 
-SUGGESTED_MODELS = [
-    "llama3.2:3b",
-    "qwen2.5:3b",
-    "phi4-mini",
-    "gemma2:2b",
-    "qwen2.5:7b",
-    "llama3.1:8b",
+# Vision model detection — any installed model whose name contains one of
+# these substrings is treated as vision-capable.
+VISION_MODEL_PATTERNS = [
+    "llava", "moondream", "minicpm-v", "minicpm_v",
+    "qwen2.5vl", "qwen3-vl", "deepseek-ocr", "glm-ocr",
+    "bakllava",
 ]
+
+# Suggested vision models (lightweight, ~3B class).
+SUGGESTED_VISION_MODELS = [
+    "qwen2.5vl:3b",    # 3.2 GB — recommended, strong document/slide understanding
+    "moondream:1.8b",  # 1.7 GB — smallest option
+    "deepseek-ocr:3b", # 3 B   — OCR-specialised
+    "llava:7b",        # 4.7 GB — general vision
+]
+
+# DPI used when rasterising a PDF page for the vision model.
+VISION_RASTER_DPI = 150
 
 SUPPORTED_EXTENSIONS = [
     "pdf", "docx", "pptx", "xlsx", "xls",

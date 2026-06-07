@@ -257,6 +257,7 @@ def summarize_mapreduce(
         stream = _with_retry(lambda p=prompt: client.chat(
             model=model,
             messages=[{"role": "user", "content": p}],
+            options={"num_predict": 2000},
             stream=True,
         ))
         with logger.open_group_write(i, group, group_text) as write_token:

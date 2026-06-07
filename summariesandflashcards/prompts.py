@@ -28,6 +28,7 @@ _PREAMBLE = (
     "6. NEVER write 'Final answer', worked calculations, or step-by-step solutions.\n"
     "7. Output the summary directly — no preamble like 'I will...' or 'Here is...'.\n"
     "8. Skip garbled or unreadable text fragments.\n"
+    "9. Write mathematical expressions using $...$ for inline math and $$...$$ (on its own line) for display equations. Example: the speed of sound is $c = \\sqrt{\\gamma P / \\rho}$.\n"
 )
 
 DEPTH_INSTRUCTIONS = {
@@ -58,6 +59,24 @@ def auto_depth(word_count: int) -> str:
         return "Concise"
     else:
         return "In-depth"
+
+
+def vision_prompt(existing_text: str = "") -> str:
+    """Prompt sent to the vision model when describing a lecture slide image."""
+    base = (
+        "This is a slide from a lecture. "
+        "Describe all visible content: text, equations, diagrams, charts, tables, and figures. "
+        "For equations write them in plain text (e.g. 'E = mc^2', 'sum from i=1 to n of x_i'). "
+        "For diagrams describe the structure (e.g. 'flowchart: A → B → C'). "
+        "Be specific and complete — do not interpret, only describe what is visible. "
+        "Write mathematical expressions using $...$ for inline and $$...$$ (on its own line) for display equations."
+    )
+    if existing_text.strip():
+        base += (
+            f"\n\nText already extracted from this slide (may be incomplete or garbled):\n"
+            f"{existing_text.strip()}"
+        )
+    return base
 
 
 def label_prompt(chunk: str) -> str:

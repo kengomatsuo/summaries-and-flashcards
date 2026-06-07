@@ -57,16 +57,18 @@ curl -fsSL https://ollama.com/install.sh | sh
 ## 2 — Pull the default model
 
 ```sh
-ollama pull llama3.2:3b
+ollama pull qwen2.5vl:3b
 ```
 
-This downloads ~2 GB and runs comfortably on 8 GB RAM. You only need to do this once.
+This downloads ~3.2 GB and runs comfortably on 8 GB RAM. You only need to do this once.
+`qwen2.5vl:3b` is vision-capable — it can read equations, diagrams, and images embedded in slides.
 
-**Optional larger models** (16 GB RAM recommended):
+**Alternative models:**
 
 ```sh
-ollama pull qwen2.5:7b
-ollama pull llama3.1:8b
+ollama pull moondream:1.8b   # 1.7 GB — smallest option, vision-capable
+ollama pull llava:7b         # 4.7 GB — general vision, 16 GB RAM recommended
+ollama pull llama3.2:3b      # 2 GB   — faster inference, text only (no image/equation reading)
 ```
 
 ---
@@ -207,11 +209,11 @@ Python 3.12 is the recommended version.
 Ollama is not installed or not on your PATH. Repeat step 1.
 
 **`No models installed` warning in the app**
-Run `ollama pull llama3.2:3b` and refresh the page.
+Run `ollama pull qwen2.5vl:3b` and refresh the page.
 
 **Scanned / image-only PDFs produce no text**
-MarkItDown uses text extraction, not OCR. Image-only scans will yield little or
-no output. OCR support is planned as a future add-on.
+Use a vision-capable model (e.g. `qwen2.5vl:3b`). The app automatically rasterises
+pages that have no readable text and sends them to the vision model for description.
 
 **Slow summarisation**
 This is normal on CPU-only machines. The 3B model is the fastest option.

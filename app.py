@@ -1,12 +1,24 @@
 import re
 import streamlit as st
+from ollama import Client
 from summariesandflashcards import ollama_client, ingest
-from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL
+from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, OLLAMA_HOST
 from summariesandflashcards.prompts import DEPTH_OPTIONS, PROFICIENCY_OPTIONS
 from summariesandflashcards import summarize
+from summariesandflashcards.ollama_client import is_vision_model
 
 _SUMMARY_HEIGHT = 500
 _SECTIONS_SHOWN = 5
+
+_DISPLAY_MATH_RE = re.compile(r'\\\[\s*(.*?)\s*\\\]', re.DOTALL)
+_INLINE_MATH_RE = re.compile(r'\\\((.*?)\\\)', re.DOTALL)
+
+
+def _fix_latex(text: str) -> str:
+    """Convert \[...\] and \(...\) to $$...$$ and $...$ for Streamlit KaTeX."""
+    text = _DISPLAY_MATH_RE.sub(lambda m: f'\n$$\n{m.group(1).strip()}\n$$\n', text)
+    text = _INLINE_MATH_RE.sub(lambda m: f'${m.group(1)}$', text)
+    return text
 
 
 def _natural_key(name: str) -> list:
@@ -54,9 +66,15 @@ if st.session_state.stage == "idle":
     if uploaded_files:
         st.divider()
         default_idx = models.index(DEFAULT_MODEL) if DEFAULT_MODEL in models else 0
+        # Tag vision-capable models in the dropdown so the user knows what they get
+        model_labels = [
+            f"{m}  (vision)" if is_vision_model(m) else f"{m}  (text only — faster)"
+            for m in models
+        ]
         col1, col2, col3 = st.columns(3)
         with col1:
-            selected_model = st.selectbox("Model", models, index=default_idx)
+            selected_label = st.selectbox("Model", model_labels, index=default_idx)
+            selected_model = models[model_labels.index(selected_label)]
         with col2:
             summary_depth = st.radio("Depth", DEPTH_OPTIONS, index=1)
         with col3:
@@ -149,11 +167,17 @@ elif st.session_state.stage == "running":
     # ── Extract ────────────────────────────────────────────────────────────────
     extracted: dict[str, str] = {}
     n_files = len(file_data)
+    vision_enabled = is_vision_model(model)
+    vision_client = Client(host=OLLAMA_HOST) if vision_enabled else None
     for i, d in enumerate(file_data):
         progress_bar.progress((i / n_files) * 0.05, text=f"Extracting {d['name']}…")
         try:
             extracted[f"File {i + 1} of {n_files}: {d['name']}"] = (
-                ingest.extract_text(d["name"], d["bytes"])
+                ingest.extract_text(
+                    d["name"], d["bytes"],
+                    vision_model=model if vision_enabled else "",
+                    client=vision_client,
+                )
             )
         except Exception as exc:
             st.warning(f"Could not extract **{d['name']}**: {exc}")
@@ -177,10 +201,10 @@ elif st.session_state.stage == "running":
     )
 
     st.markdown("**Summary**")
-    with st.container(height=_SUMMARY_HEIGHT, border=True):
-        result = st.write_stream(stream)
+    result = st.write_stream(stream)
 
     summary: str = result if isinstance(result, str) else "".join(result)
+    summary = _fix_latex(summary)
     progress_bar.empty()
     st.session_state.last_summary = summary
     st.session_state.stage = "done"
