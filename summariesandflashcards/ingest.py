@@ -69,7 +69,7 @@ def _vision_describe(client: "Client", model: str, img_b64: str, existing_text: 
                 "content": prompt,
                 "images": [img_b64],
             }],
-            options={"num_predict": 1000},
+            options={"num_predict": 1000, "temperature": 0},
             stream=False,
         )
         return response["message"]["content"].strip()

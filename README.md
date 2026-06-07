@@ -54,22 +54,19 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ---
 
-## 2 — Pull the default model
+## 2 — Pull the two required models
 
 ```sh
-ollama pull qwen2.5vl:3b
+ollama pull qwen2.5vl:3b   # 3.2 GB — vision: reads equations, diagrams, images in slides
+ollama pull qwen2.5:3b     # 1.9 GB — text: writes the summaries
 ```
 
-This downloads ~3.2 GB and runs comfortably on 8 GB RAM. You only need to do this once.
-`qwen2.5vl:3b` is vision-capable — it can read equations, diagrams, and images embedded in slides.
-
-**Alternative models:**
-
-```sh
-ollama pull moondream:1.8b   # 1.7 GB — smallest option, vision-capable
-ollama pull llava:7b         # 4.7 GB — general vision, 16 GB RAM recommended
-ollama pull llama3.2:3b      # 2 GB   — faster inference, text only (no image/equation reading)
-```
+You only need to do this once. The app uses a fixed pair: the vision model extracts
+content from slides/pages, then is unloaded and the text-only model writes the summary.
+The text-only model is a stronger instruction-follower than its vision sibling, and
+unloading the vision model first keeps peak RAM at ~3.2 GB (not the sum). There is no
+model picker in the app — these two names are set in `summariesandflashcards/config.py`
+(`DEFAULT_MODEL` and `TEXT_MODEL`).
 
 ---
 
@@ -152,9 +149,10 @@ Expected output:
 Summaries and Flashcards — setup check
 
   ✓  Ollama server is running
-  ✓  Default model 'llama3.2:3b' is installed
+  ✓  Required model 'qwen2.5vl:3b' is installed
+  ✓  Required model 'qwen2.5:3b' is installed
 
-  Installed models: llama3.2:3b
+  Installed models: qwen2.5:3b, qwen2.5vl:3b
 
 All checks passed. Run the app with:
   streamlit run app.py
@@ -208,8 +206,8 @@ Python 3.12 is the recommended version.
 **`zsh: command not found: ollama` / `ollama is not recognized`**
 Ollama is not installed or not on your PATH. Repeat step 1.
 
-**`No models installed` warning in the app**
-Run `ollama pull qwen2.5vl:3b` and refresh the page.
+**`Required model(s) not installed` warning in the app**
+Run `ollama pull qwen2.5vl:3b` and `ollama pull qwen2.5:3b`, then refresh the page.
 
 **Scanned / image-only PDFs produce no text**
 Use a vision-capable model (e.g. `qwen2.5vl:3b`). The app automatically rasterises

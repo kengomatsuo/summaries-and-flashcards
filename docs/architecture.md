@@ -29,11 +29,22 @@ idle → running → done
 
 | Stage | What happens |
 |---|---|
-| **idle** | File upload widget, model/depth/proficiency controls, Summarise button |
+| **idle** | File upload widget and a Summarise button. There are no model/depth/proficiency controls — the model pair is fixed and the summary is always **In-depth** at **Beginner** level (set in the button handler in `app.py`). |
 | **running** | Pipeline executes synchronously; expander panels update live; `st.write_stream()` streams the summary token-by-token into the page |
 | **done** | Fixed-height tabs (one per topic group) display the finished summary; download buttons |
 
 Transition `running → done`: assembled summary is post-processed by `_fix_latex()`, stored in `session_state.last_summary`, then `st.rerun()` switches stage to `done`.
+
+### Model routing (fixed pair)
+
+Two models, set in `summariesandflashcards/config.py`, are used per run — there is no in-app picker:
+
+- `DEFAULT_MODEL = "qwen2.5vl:3b"` (vision) — extracts text + image descriptions during ingest.
+- `TEXT_MODEL = "qwen2.5:3b"` (text) — runs the skim/group/write phases.
+
+`app.py` routes the text phases to `TEXT_MODEL` when it is installed (else falls back to the selected/vision model). After extraction finishes, the vision model is **unloaded** (`client.chat(model=vision, messages=[], keep_alive=0)`) before the text phases load the second model, so peak RAM is ~max(vision, text) ≈ 3.2 GB rather than the sum. The startup health check requires both models to be present. A text-only model is a stronger instruction-follower than its VL sibling of the same size — using it for the write phase materially reduces hallucination and over-refusal.
+
+All LLM calls (vision describe, skim, group, write) run at `temperature: 0` for faithful, deterministic output — repeated runs on the same input produce identical summaries.
 
 ---
 
@@ -104,11 +115,13 @@ For each consecutive pair of labels, one LLM call (`adjacency_prompt()`) returns
 
 One **streaming** LLM call per group. The raw text of all sections in the group is sent with `summary_prompt(depth, proficiency)`. Tokens are yielded directly to the UI.
 
-**Gate B — opener strip + SKIP sentinel.** The lead of each group's output is buffered just long enough (first newline or 100 chars) to (a) strip the model's habitual `"The lecture covered…"` / `"This slide discusses…"` narration prefix — only the lead phrase, so the topic noun that follows survives — and (b) honour a `SKIP` sentinel: the write prompt instructs the model to reply `SKIP` for a section with no teachable content, and such groups emit nothing. After the lead is decided the rest streams live. A `\n\n---\n\n` separator is emitted only *between groups that actually wrote*, so dropped/SKIP groups leave no empty parts. The final labels of written groups are sent to the UI via the `written_labels` step event to keep tabs aligned.
+**Gate B — opener strip + decline safety net.** The lead of each group's output is buffered just long enough (first newline or 100 chars) to (a) strip the model's habitual `"The lecture covered…"` / `"This slide discusses…"` narration prefix — only the lead phrase, so the topic noun that follows survives — and (b) detect a *decline*: a bare `SKIP`/`None`/`N/A`, or a verbose refusal (`"there is no lecture theory…"`), in which case the group emits nothing. After the lead is decided the rest streams live. A `\n\n---\n\n` separator is emitted only *between groups that actually wrote*, so any dropped group leaves no empty parts. The final labels of written groups are sent to the UI via the `written_labels` step event to keep tabs aligned.
+
+The write prompt does **not** ask the model to skip — Gate A (deterministic) is the sole authority on what gets summarised, and the prompt tells the writer to always restate the notes' specifics. Decline-detection here is only a safety net for when a model refuses anyway (some do; see decisions.md). This is why every group that survives Gate A is summarised — including terse setup/intro/conclusion slides that a self-judging writer would wrongly drop.
 
 Groups are separated in the output stream by `\n\n---\n\n`. The DONE stage splits on this delimiter to populate tabs.
 
-Token cap: `options={"num_predict": 2000}` on every write call. Vision description calls use `{"num_predict": 1000}`.
+Token cap: `options={"num_predict": 2000, "temperature": 0}` on every write call. Vision description calls use `{"num_predict": 1000, "temperature": 0}`. Skim and grouping calls also run at `temperature: 0`.
 
 ---
 

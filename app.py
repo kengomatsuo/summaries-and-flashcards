@@ -3,7 +3,6 @@ import streamlit as st
 from ollama import Client
 from summariesandflashcards import ollama_client, ingest
 from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, TEXT_MODEL, OLLAMA_HOST
-from summariesandflashcards.prompts import DEPTH_OPTIONS, PROFICIENCY_OPTIONS
 from summariesandflashcards import summarize
 from summariesandflashcards.ollama_client import is_vision_model
 from summariesandflashcards.history import append_run, load_history
@@ -39,9 +38,14 @@ if not ollama_client.is_up():
     st.stop()
 
 models = ollama_client.list_models()
-if not models:
+_required = [DEFAULT_MODEL, TEXT_MODEL]
+_missing = [m for m in _required if m not in models]
+if _missing:
+    pulls = "\n".join(f"ollama pull {m}" for m in _missing)
+    names = ", ".join(f"`{m}`" for m in _missing)
     st.error(
-        f"**No models installed.** Pull one with:\n```\nollama pull {DEFAULT_MODEL}\n```\nThen refresh."
+        f"**Required model(s) not installed:** {names}.\n\n"
+        f"Pull them with:\n```\n{pulls}\n```\nThen refresh."
     )
     st.stop()
 
@@ -66,29 +70,16 @@ if st.session_state.stage == "idle":
 
     if uploaded_files:
         st.divider()
-        default_idx = models.index(DEFAULT_MODEL) if DEFAULT_MODEL in models else 0
-        # Tag vision-capable models in the dropdown so the user knows what they get
-        model_labels = [
-            f"{m}  (vision)" if is_vision_model(m) else f"{m}  (text only — faster)"
-            for m in models
-        ]
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            selected_label = st.selectbox("Model", model_labels, index=default_idx)
-            selected_model = models[model_labels.index(selected_label)]
-        with col2:
-            summary_depth = st.radio("Depth", DEPTH_OPTIONS, index=1)
-        with col3:
-            proficiency = st.radio("Level", PROFICIENCY_OPTIONS, index=1)
-
+        # Models, depth, and proficiency are fixed: vision = DEFAULT_MODEL,
+        # text = TEXT_MODEL, In-depth summary at Beginner level.
         if st.button("✨ Summarise", type="primary", use_container_width=True):
             sorted_files = sorted(uploaded_files, key=lambda f: _natural_key(f.name))
             st.session_state.file_data = [
                 {"name": f.name, "bytes": f.getvalue()} for f in sorted_files
             ]
-            st.session_state.selected_model = selected_model
-            st.session_state.summary_depth = summary_depth
-            st.session_state.proficiency = proficiency
+            st.session_state.selected_model = DEFAULT_MODEL
+            st.session_state.summary_depth = "In-depth"
+            st.session_state.proficiency = "Beginner"
             st.session_state.stage = "running"
             st.rerun()
 

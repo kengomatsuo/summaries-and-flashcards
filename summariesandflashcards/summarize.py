@@ -35,6 +35,7 @@ def _collect(client: Client, model: str, prompt: str) -> str:
     response = client.chat(
         model=model,
         messages=[{"role": "user", "content": prompt}],
+        options={"temperature": 0},  # faithful, deterministic skim/grouping
         stream=False,
     )
     return response["message"]["content"]
@@ -158,9 +159,39 @@ def _strip_opener(text: str) -> str:
 
 
 def _is_skip(text: str) -> bool:
-    """True if the model declined the section (SKIP sentinel) or returned nothing."""
+    """True if the model declined the section (SKIP sentinel) or returned nothing.
+
+    Covers the degenerate one-word non-answers small models emit instead of
+    following the SKIP instruction: "None", "N/A", "(none)".
+    """
     t = text.strip().rstrip('.').strip().upper()
-    return t == "" or t == "SKIP"
+    return t in ("", "SKIP", "NONE", "N/A", "(NONE)")
+
+
+# A "SKIP" on its own line anywhere in the lead (some models prepend prose).
+_SKIP_LINE_RE = re.compile(r'(?m)^\s*SKIP[\s.]*$')
+
+# Verbose refusals: a weak model sometimes narrates "there is no content here"
+# instead of emitting the SKIP sentinel. Anchored to notes/theory/summary wording
+# so it does not fire on a genuine summary that merely starts with "There is no…".
+_REFUSAL_RE = re.compile(
+    r"^\s*(?:"
+    r"i\s+(?:don'?t|do\s+not|can'?t|cannot)\s+see\s+(?:any\s+)?"
+    r"(?:lecture\s+)?(?:theory|content|notes?|summary|information)"
+    r"|there\s+(?:is|are)\s+no\s+(?:detailed\s+|summary\s+of\s+|actual\s+)?"
+    r"(?:lecture\s+)?(?:theory|content|summary|information|notes?)"
+    r"|unfortunately,?\s+there\s+(?:is|are)\s+no\s+(?:lecture\s+)?(?:theory|content)"
+    r"|(?:the\s+)?notes?\s+(?:do\s+not|don'?t)\s+contain\s+(?:any\s+)?"
+    r"(?:lecture\s+)?(?:theory|content)"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _declines(lead: str) -> bool:
+    """True if the lead is a SKIP sentinel or a verbose refusal to summarise."""
+    t = lead.strip()
+    return _is_skip(t) or bool(_SKIP_LINE_RE.search(t)) or bool(_REFUSAL_RE.match(t))
 
 
 def _split_sections(text: str) -> tuple[list[str], str]:
@@ -254,6 +285,7 @@ def summarize_stream(
     stream = _with_retry(lambda: client.chat(
         model=model,
         messages=[{"role": "user", "content": prompt}],
+        options={"temperature": 0},
         stream=True,
     ))
     for chunk in stream:
@@ -363,7 +395,7 @@ def summarize_mapreduce(
         stream = _with_retry(lambda p=prompt: client.chat(
             model=model,
             messages=[{"role": "user", "content": p}],
-            options={"num_predict": 2000},
+            options={"num_predict": 2000, "temperature": 0},
             stream=True,
         ))
 
@@ -399,17 +431,14 @@ def summarize_mapreduce(
                 if "\n" not in lead and len(lead) < 100:
                     continue
                 decided = True
-                cleaned = _strip_opener(lead.lstrip())
-                if _is_skip(cleaned):
+                if _declines(lead):
                     skipped = True
                 else:
-                    yield from _commit(cleaned)
+                    yield from _commit(_strip_opener(lead.lstrip()))
 
             # Stream ended before the lead buffer tripped the threshold.
-            if not decided and not skipped:
-                cleaned = _strip_opener(lead.lstrip())
-                if not _is_skip(cleaned):
-                    yield from _commit(cleaned)
+            if not decided and not skipped and not _declines(lead):
+                yield from _commit(_strip_opener(lead.lstrip()))
 
     _step("written_labels", written_labels)
     logger.log_summary("".join(tokens_collected))
