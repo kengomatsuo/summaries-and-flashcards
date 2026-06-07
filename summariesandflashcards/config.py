@@ -50,3 +50,9 @@ GROUP_SIZE = 15
 # Tune up to drop more aggressively, down to keep terser slides. Title slides in
 # this corpus run ~8–9 words; pipeline-step labels ("Result") run 1–3.
 MIN_GROUP_WORDS = 12
+
+# Flashcards — content-proportional generation (one card per distinct fact).
+# Per-topic ceiling guards a small model against padding a thin topic; the total
+# cap bounds deck size / generation time on a large summary.
+FLASHCARD_MAX_PER_TOPIC = 5
+FLASHCARD_MAX_TOTAL = 40

@@ -21,19 +21,27 @@ Summaries and Flashcards/
 
 ## UI state machine
 
-`app.py` drives three stages via `st.session_state.stage`:
+`app.py` is a single tidy file built as an **app shell**: a persistent **sidebar** (`render_sidebar`) plus a **main canvas** that `main()` swaps on `st.session_state.stage`. Helpers are small and focused (`_require_ready`, `_reset`, `_load_run`, `_render_summary`, `_render_flashcards`, `_extract`, and a `_ProgressView` class for the live pipeline panels). Result state lives under a fixed set of session keys (`_RESULT_KEYS`), cleared by `_reset()`.
+
+**Sidebar (always visible):** wordmark + "Local · offline" status, a **＋ New summary** button (`_reset`), the **Library** (every `history.json` run as a button → `_load_run` loads it into the canvas; the active run is marked), and a model-pair status line. This separates controls/navigation from output — the recommended pattern for non-trivial Streamlit apps. A single injected stylesheet, `_APP_CSS`, handles the few things native theming can't: it pins the sidebar to viewport height (full-height flex column; the Library — wrapped in `st.container(key="library_scroll")` — is `flex: 1` with `overflow-y: auto` and a hidden scrollbar, so the header/status stay put and only the run list scrolls); it makes Library items left-aligned single-line rows that ellipsis on overflow; and it restyles the Download `st.popover` (items wrapped in `st.container(key="dl_menu")`) into a flat dropdown menu. All selectors use stable `data-testid`s plus `.st-key-*` classes (from container `key`s) — no emotion-hash selectors.
+
+**Main canvas:**
 
 ```
 idle → running → done
 ```
 
-| Stage | What happens |
-|---|---|
-| **idle** | File upload widget and a Summarise button. There are no model/depth/proficiency controls — the model pair is fixed and the summary is always **In-depth** at **Beginner** level (set in the button handler in `app.py`). |
-| **running** | Pipeline executes synchronously; expander panels update live; `st.write_stream()` streams the summary token-by-token into the page |
-| **done** | Fixed-height tabs (one per topic group) display the finished summary; download buttons |
+| Stage | Function | What happens |
+|---|---|---|
+| **idle** | `render_idle` | Upload zone (drop notes → Summarise). No model/depth/level controls — the model pair is fixed and the summary is always **In-depth** at **Beginner** level (`_DEPTH`/`_LEVEL`). |
+| **running** | `render_running` | Vision extract → unload → text summarise; `_ProgressView` updates expander panels live; `st.write_stream()` streams the summary token-by-token. |
+| **done** | `render_done` | Result header (file names · "AI-generated · fully local" badge · a `st.popover` for `.md`/`.txt` downloads) then two top-level tabs — **Summary** (per-topic `selectbox` + content) and **Flashcards** (flip deck + `.apkg`). |
 
-Transition `running → done`: assembled summary is post-processed by `_fix_latex()`, stored in `session_state.last_summary`, then `st.rerun()` switches stage to `done`.
+Transition `running → done`: the assembled summary is post-processed by `_fix_latex()`, persisted via `append_run()` (returns the run `id`), stored in `session_state`, then `st.rerun()` switches stage to `done`.
+
+The layout follows researched UX guidance: controls/library in the sidebar, results in the main canvas; the result header makes it explicit the summary is **AI-generated** and shows its **source files** (transparency + scope clarity for AI-generated content).
+
+**Theming.** Look-and-feel is set in `.streamlit/config.toml` (`[theme]`) — a minimal monochrome scheme (white background, near-black text/accent, `Georgia` serif headings, light borders, medium radius) plus `[client] toolbarMode = "minimal"`. This is Streamlit's native, version-stable theming; no fragile CSS overrides.
 
 ### Model routing (fixed pair)
 
@@ -174,9 +182,7 @@ On-demand in the DONE stage (a "Generate flashcards" button — it's an extra LL
 
 **Grounding.** Cards are generated from the **finished summary**, not the raw source. The summary is already gated (Gate A/B) and faithful, so cards derived from it inherit that faithfulness. Generation is **one call per summary topic** (the `parts` split on `\n\n---\n\n`) — small focused calls produce valid JSON far more reliably on a 3B model than one large call, and each call sees only its topic. `flashcard_prompt` restricts the model to facts in the supplied text; `temperature: 0`.
 
-**Topic rotation + accumulation.** Each "Generate" click consumes a random batch of `_PARTS_PER_GEN` (default 2) *previously-unused* topics and merges the new cards (deduped by question) into a growing deck — so every generation yields fresh cards without raising temperature (which would cost faithfulness/determinism). A batch's topics are marked used even if it yields nothing, so generation always advances rather than re-hitting a dry (deterministically empty) topic. The generate control hides once all topics are covered.
-
-**Source of truth = session, not history.** The live deck and `used_parts` live in `st.session_state`; `history.save_flashcards(run_id, deck, used)` mirrors the *full* deck to the run's history entry as a best-effort side-effect (each run carries a `uuid` `id`; it no-ops for legacy runs created before ids existed). This is deliberate: an earlier version reconstructed the deck from history on every generation, so whenever `run_id` failed to resolve (e.g. a legacy run) the second generation returned only the new batch and silently dropped the accumulated deck — surfacing as a false "couldn't generate new cards" message. With the session as truth, accumulation is correct regardless of persistence; revisiting a summary from "Recent runs" still restores whatever was saved.
+**Content-proportional, one-shot.** `generate_cards(parts)` runs over *all* topics in a single pass and asks for **one card per distinct fact** in each topic — as many as it supports, capped at `FLASHCARD_MAX_PER_TOPIC` (config, default 5), with the whole deck capped at `FLASHCARD_MAX_TOTAL` (default 40). A dense topic yields more cards, a thin one fewer — the same "let content set the length, never pad" rule the summariser uses. Because output is content-proportional and deterministic (`temperature: 0`), one generation already produces the complete deck, so there is **no "generate more" / rotation / accumulation** — the earlier per-batch rotation (and its `used_parts` tracking) was removed. The deck is persisted once via `history.save_flashcards(run_id, cards)` (best-effort; no-ops for legacy runs without an `id`) and restored when revisiting a run from "Recent runs".
 
 **Parsing.** `_parse_cards` tries strict `json.loads` on the first `[...]` array, then falls back to a regex (`_PAIR_RE`) that recovers `"q"/"a"` pairs directly — necessary because 3B models emit structurally-broken-but-recoverable JSON (stray `}}`, trailing commas). `_generate_for_text` retries once per part; unparseable parts are skipped, never fatal. Cards are deduped by question and capped at `max_total`.
 

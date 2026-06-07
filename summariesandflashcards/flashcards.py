@@ -19,7 +19,12 @@ import genanki
 import latex2mathml.converter
 import markdown as _markdown
 
-from summariesandflashcards.config import OLLAMA_HOST, TEXT_MODEL
+from summariesandflashcards.config import (
+    OLLAMA_HOST,
+    TEXT_MODEL,
+    FLASHCARD_MAX_PER_TOPIC,
+    FLASHCARD_MAX_TOTAL,
+)
 
 # Fixed IDs (generated once with `random.randrange(1 << 30, 1 << 31)`). Anki uses
 # these to identify the note model and deck on import — they must stay constant.
@@ -119,15 +124,14 @@ def generate_cards(
     parts: list[str],
     model: str = TEXT_MODEL,
     host: str = OLLAMA_HOST,
-    per_part: int = 2,
-    max_total: int = 20,
+    max_per_topic: int = FLASHCARD_MAX_PER_TOPIC,
+    max_total: int = FLASHCARD_MAX_TOTAL,
 ) -> list[tuple[str, str]]:
-    """Generate flashcards from summary topic parts, deduped and capped.
+    """Generate a full deck of flashcards from all summary topic parts.
 
-    Args:
-        parts:     Summary split into topic chunks (the done-stage `parts`).
-        per_part:  Target cards per topic.
-        max_total: Hard cap on the returned deck size.
+    Content-proportional: each topic yields one card per distinct fact (capped at
+    `max_per_topic`), so a dense topic gives more cards and a thin one gives fewer.
+    Cards are deduped by question across topics and the deck is capped at `max_total`.
     """
     from ollama import Client
 
@@ -140,7 +144,7 @@ def generate_cards(
             break
         if not part.strip():
             continue
-        for q, a in _generate_for_text(client, model, part, per_part):
+        for q, a in _generate_for_text(client, model, part, max_per_topic):
             key = q.lower().strip()
             if key in seen:
                 continue

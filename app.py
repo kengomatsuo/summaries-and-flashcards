@@ -1,273 +1,341 @@
+"""Summaries and Flashcards — fully local lecture-notes summariser (Streamlit entry point).
+
+App shell: a persistent sidebar (New summary / Library / status) drives a single
+main canvas that swaps on `st.session_state.stage`:
+  idle    → upload zone
+  running → extract (vision) → summarise (text), with a live progress view
+  done    → result header + Summary / Flashcards tabs
+
+Models, depth, and level are fixed (see config); the UI exposes no knobs for them.
+"""
+
 import re
+
 import streamlit as st
 from ollama import Client
-from summariesandflashcards import ollama_client, ingest
+
+from summariesandflashcards import ollama_client, ingest, summarize, flashcards
 from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, TEXT_MODEL, OLLAMA_HOST
-from summariesandflashcards import summarize
-from summariesandflashcards import flashcards
 from summariesandflashcards.ollama_client import is_vision_model
 from summariesandflashcards.history import append_run, save_flashcards, load_history
 
-_SUMMARY_HEIGHT = 500
-_PARTS_PER_GEN = 2  # summary topics consumed per flashcard generation
+# ── Constants ──────────────────────────────────────────────────────────────────
+_SUMMARY_HEIGHT = 520
+_CARD_HEIGHT = 420
 _SECTIONS_SHOWN = 5
+_DEPTH = "In-depth"
+_LEVEL = "Beginner"
 
-_DISPLAY_MATH_RE = re.compile(r'\\\[\s*(.*?)\s*\\\]', re.DOTALL)
-_INLINE_MATH_RE = re.compile(r'\\\((.*?)\\\)', re.DOTALL)
+_RESULT_KEYS = (
+    "file_data", "last_summary", "group_labels",
+    "run_id", "flashcards", "flashcards_apkg",
+)
+
+_DISPLAY_MATH_RE = re.compile(r"\\\[\s*(.*?)\s*\\\]", re.DOTALL)
+_INLINE_MATH_RE = re.compile(r"\\\((.*?)\\\)", re.DOTALL)
+
+# App CSS — the only injected styling. Pins the sidebar to viewport height with a flex-1
+# scrollable Library, makes the Library items proper truncating menu rows, and turns the
+# Download popover into a flat dropdown menu. Selectors use stable data-testids + `.st-key-`
+# container classes (from st.container(key=...)).
+_APP_CSS = """
+<style>
+/* sidebar fills the viewport and does NOT scroll itself — the Library handles overflow */
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] { height: 100%; overflow: hidden; }
+[data-testid="stSidebarUserContent"] { height: 100%; }
+[data-testid="stSidebarUserContent"] > div { height: 100%; }
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+[data-testid="stSidebar"] hr { margin: 0.4rem 0; }
+/* match the gap above LIBRARY to the button↔separator gap (caption ships margin-top:0) */
+.st-key-library_label { margin-top: 1rem; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-library_scroll) {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+/* Library fills remaining space and scrolls, with the scroll indicator hidden */
+.st-key-library_scroll { height: 100%; overflow-y: auto; scrollbar-width: none; gap: 0; }
+.st-key-library_scroll::-webkit-scrollbar { display: none; }
+
+/* Library items: borderless full-width rows, left-aligned, single line, ellipsis */
+.st-key-library_scroll button {
+    justify-content: flex-start;
+    text-align: left;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+.st-key-library_scroll button:hover { background: #f0efed !important; }
+.st-key-lib_active button { background: #e8e7e4 !important; }  /* active run */
+.st-key-library_scroll button > div,
+.st-key-library_scroll button > div > span {
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+}
+.st-key-library_scroll button [data-testid="stMarkdownContainer"] { min-width: 0; max-width: 100%; }
+.st-key-library_scroll button p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Download popover → flat dropdown menu: tight body, full-bleed borderless rows.
+   The popover body already clips to its radius, so the rows need no radius. */
+[data-testid="stPopoverBody"] { padding: 0; }
+.st-key-dl_menu { gap: 0; }
+.st-key-dl_menu button {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 0.4rem 0.85rem;
+}
+.st-key-dl_menu button > div,
+.st-key-dl_menu button > div > span { justify-content: flex-start; width: 100%; }
+.st-key-dl_menu button:hover { background: #f0efed !important; }
+</style>
+"""
 
 
+# ── Small helpers ────────────────────────────────────────────────────────────
 def _fix_latex(text: str) -> str:
     r"""Convert \[...\] and \(...\) to $$...$$ and $...$ for Streamlit KaTeX."""
-    text = _DISPLAY_MATH_RE.sub(lambda m: f'\n$$\n{m.group(1).strip()}\n$$\n', text)
-    text = _INLINE_MATH_RE.sub(lambda m: f'${m.group(1)}$', text)
+    text = _DISPLAY_MATH_RE.sub(lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n", text)
+    text = _INLINE_MATH_RE.sub(lambda m: f"${m.group(1)}$", text)
     return text
 
 
 def _natural_key(name: str) -> list:
     return [
         (0, int(p)) if p.isdigit() else (1, p.lower())
-        for p in re.split(r'(\d+)', name)
+        for p in re.split(r"(\d+)", name)
     ]
 
 
-st.set_page_config(page_title="Summaries and Flashcards", page_icon="📄", layout="centered")
-
-# ── Health check ──────────────────────────────────────────────────────────────
-if not ollama_client.is_up():
-    st.error(
-        "**Ollama is not running.** Start it with:\n```\nollama serve\n```\nThen refresh."
-    )
-    st.stop()
-
-models = ollama_client.list_models()
-_required = [DEFAULT_MODEL, TEXT_MODEL]
-_missing = [m for m in _required if m not in models]
-if _missing:
-    pulls = "\n".join(f"ollama pull {m}" for m in _missing)
-    names = ", ".join(f"`{m}`" for m in _missing)
-    st.error(
-        f"**Required model(s) not installed:** {names}.\n\n"
-        f"Pull them with:\n```\n{pulls}\n```\nThen refresh."
-    )
-    st.stop()
-
-# ── Session state init ────────────────────────────────────────────────────────
-if "stage" not in st.session_state:
+def _reset() -> None:
+    for k in _RESULT_KEYS:
+        st.session_state.pop(k, None)
     st.session_state.stage = "idle"
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.title("Summaries and Flashcards")
-st.caption("Fully local AI lecture notes summariser — no internet required.")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# IDLE — upload + configure
-# ══════════════════════════════════════════════════════════════════════════════
-if st.session_state.stage == "idle":
-    uploaded_files = st.file_uploader(
-        "notes",
-        type=SUPPORTED_EXTENSIONS,
-        accept_multiple_files=True,
-        label_visibility="collapsed",
-    )
+def _files_label(files: list[str]) -> str:
+    head = files[0]
+    return head if len(files) == 1 else f"{head}  +{len(files) - 1}"
 
-    if uploaded_files:
-        st.divider()
-        # Models, depth, and proficiency are fixed: vision = DEFAULT_MODEL,
-        # text = TEXT_MODEL, In-depth summary at Beginner level.
-        if st.button("✨ Summarise", type="primary", use_container_width=True):
-            sorted_files = sorted(uploaded_files, key=lambda f: _natural_key(f.name))
-            st.session_state.file_data = [
-                {"name": f.name, "bytes": f.getvalue()} for f in sorted_files
-            ]
-            st.session_state.selected_model = DEFAULT_MODEL
-            st.session_state.summary_depth = "In-depth"
-            st.session_state.proficiency = "Beginner"
-            st.session_state.stage = "running"
+
+def _require_ready() -> list[str]:
+    """Stop the app with guidance unless Ollama is up and both models are present."""
+    if not ollama_client.is_up():
+        st.error("**Ollama is not running.** Start it with:\n```\nollama serve\n```\nThen refresh.")
+        st.stop()
+    models = ollama_client.list_models()
+    missing = [m for m in (DEFAULT_MODEL, TEXT_MODEL) if m not in models]
+    if missing:
+        pulls = "\n".join(f"ollama pull {m}" for m in missing)
+        names = ", ".join(f"`{m}`" for m in missing)
+        st.error(
+            f"**Required model(s) not installed:** {names}.\n\n"
+            f"Pull them with:\n```\n{pulls}\n```\nThen refresh."
+        )
+        st.stop()
+    return models
+
+
+# ── Sidebar (persistent shell) ───────────────────────────────────────────────
+def render_sidebar() -> None:
+    with st.sidebar:
+        st.markdown("## Summaries and Flashcards")
+
+        if st.button("＋  New summary", use_container_width=True):
+            _reset()
             st.rerun()
 
-    runs = load_history()
-    if runs:
         st.divider()
-        st.caption("Recent runs")
-        for i, run in enumerate(runs):
-            file_label = ", ".join(run["files"])
-            with st.expander(f"{run['timestamp']} — {file_label}"):
-                st.caption(
-                    f"Model: {run['model']} · Depth: {run['depth']} · Level: {run['proficiency']}"
-                )
-                if st.button("View summary", key=f"load_run_{i}"):
-                    st.session_state.last_summary = run["summary"]
-                    st.session_state.file_data = [
-                        {"name": f, "bytes": b""} for f in run["files"]
-                    ]
-                    st.session_state.group_labels = run.get("group_labels", [])
-                    # Restore this run's nested flashcard history + topic state
-                    st.session_state.run_id = run.get("id", "")
-                    fc = run.get("flashcards", [])
-                    st.session_state.flashcards = [(c["q"], c["a"]) for c in fc]
-                    st.session_state.used_parts = run.get("used_parts", [])
-                    st.session_state.flashcards_apkg = (
-                        flashcards.build_apkg(st.session_state.flashcards) if fc else b""
-                    )
-                    st.session_state.stage = "done"
+        with st.container(key="library_label"):
+            st.caption("LIBRARY")
+        with st.container(key="library_scroll"):
+            runs = load_history()
+            if not runs:
+                st.caption("No runs yet.")
+            active = st.session_state.get("run_id")
+            for i, run in enumerate(runs):
+                is_active = bool(run.get("id")) and run.get("id") == active
+                if st.button(
+                    _files_label(run["files"]),
+                    key="lib_active" if is_active else f"lib_{i}",
+                    use_container_width=True,
+                ):
+                    _load_run(run)
                     st.rerun()
 
+        st.caption(f"{DEFAULT_MODEL} · {TEXT_MODEL}")
+
+
+def _load_run(run: dict) -> None:
+    st.session_state.file_data = [{"name": f, "bytes": b""} for f in run["files"]]
+    st.session_state.last_summary = run["summary"]
+    st.session_state.group_labels = run.get("group_labels", [])
+    st.session_state.run_id = run.get("id", "")
+    saved = run.get("flashcards", [])
+    st.session_state.flashcards = [(c["q"], c["a"]) for c in saved]
+    st.session_state.flashcards_apkg = (
+        flashcards.build_apkg(st.session_state.flashcards) if saved else b""
+    )
+    st.session_state.stage = "done"
+
+
 # ══════════════════════════════════════════════════════════════════════════════
-# RUNNING — live pipeline view
+# IDLE — upload zone
 # ══════════════════════════════════════════════════════════════════════════════
-elif st.session_state.stage == "running":
-    file_data: list[dict] = st.session_state.file_data
-    model: str = st.session_state.selected_model
-    depth: str = st.session_state.summary_depth
-    proficiency: str = st.session_state.proficiency
+def render_idle() -> None:
+    st.subheader("New summary")
+    st.caption("Drop your notes — PDF, DOCX, PPTX, and more — for a summary and flashcards.")
+    uploaded = st.file_uploader(
+        "notes", type=SUPPORTED_EXTENSIONS,
+        accept_multiple_files=True, label_visibility="collapsed",
+    )
+    if uploaded and st.button("Summarise", type="primary", use_container_width=True):
+        ordered = sorted(uploaded, key=lambda f: _natural_key(f.name))
+        st.session_state.file_data = [
+            {"name": f.name, "bytes": f.getvalue()} for f in ordered
+        ]
+        st.session_state.stage = "running"
+        st.rerun()
 
-    st.markdown("  ".join(f"`{d['name']}`" for d in file_data))
-    progress_bar = st.progress(0.0, text="Starting…")
 
-    # One st.empty() per pipeline step — contents are swapped in/out as steps run
-    files_ph = st.empty()
-    sections_ph = st.empty()
-    groups_ph = st.empty()
+# ══════════════════════════════════════════════════════════════════════════════
+# RUNNING — live pipeline
+# ══════════════════════════════════════════════════════════════════════════════
+class _ProgressView:
+    """Live, in-place view of the pipeline's segment/skim/group phases."""
 
-    # ── Render helpers ─────────────────────────────────────────────────────────
-    files_acc: list[tuple[str, int]] = []
-    sections_acc: list[tuple[str, str]] = []
+    def __init__(self) -> None:
+        self._files_ph = st.empty()
+        self._sections_ph = st.empty()
+        self._groups_ph = st.empty()
+        self._files: list[tuple[str, int]] = []
+        self._sections: list[tuple[str, str]] = []
 
-    def _render_files(collapsed: bool = False) -> None:
-        n = len(files_acc)
-        label = f"Files — {n} processed" if n else "Files"
-        with files_ph.container():
-            with st.expander(label, expanded=not collapsed):
-                for fname, nsec in files_acc:
-                    noun = "section" if nsec == 1 else "sections"
-                    st.markdown(f"✓ &nbsp;**{fname}** — {nsec} {noun}")
+    def on_step(self, event: str, data) -> None:
+        if event == "segment":
+            fi, n_files, name, n_sec = data
+            self._files.append((name, n_sec))
+            self._draw_files(collapsed=(fi == n_files - 1))
+        elif event == "section":
+            i, n, title, label = data
+            self._sections.append((title, label))
+            self._draw_sections(collapsed=(i == n - 1))
+        elif event == "groups":
+            self._draw_sections(collapsed=True)
+            self._draw_groups(data)
+            st.session_state.group_labels = [g[0][0][:40] for g in data]
+        elif event == "written_labels":
+            st.session_state.group_labels = data
 
-    def _render_sections(collapsed: bool = False) -> None:
-        n = len(sections_acc)
-        label = f"Sections — {n} labelled" if n else "Sections"
-        shown = sections_acc[-_SECTIONS_SHOWN:]
-        n_hidden = n - len(shown)
-        with sections_ph.container():
-            with st.expander(label, expanded=not collapsed):
-                if n_hidden > 0:
-                    st.caption(f"↑ {n_hidden} more above")
-                for title, lbl in shown:
-                    st.markdown(f"✓ &nbsp;**{title}** — {lbl}")
+    def _draw_files(self, collapsed: bool) -> None:
+        with self._files_ph.container():
+            with st.expander(f"Files — {len(self._files)} processed", expanded=not collapsed):
+                for name, nsec in self._files:
+                    st.markdown(f"✓ &nbsp;**{name}** — {nsec} section{'s' * (nsec != 1)}")
 
-    def _render_groups(groups: list) -> None:
-        n = len(groups)
-        with groups_ph.container():
-            with st.expander(f"Groups — {n} topics", expanded=False):
+    def _draw_sections(self, collapsed: bool) -> None:
+        n = len(self._sections)
+        shown = self._sections[-_SECTIONS_SHOWN:]
+        with self._sections_ph.container():
+            with st.expander(f"Sections — {n} labelled", expanded=not collapsed):
+                if n - len(shown) > 0:
+                    st.caption(f"↑ {n - len(shown)} more above")
+                for title, label in shown:
+                    st.markdown(f"✓ &nbsp;**{title}** — {label}")
+
+    def _draw_groups(self, groups: list) -> None:
+        with self._groups_ph.container():
+            with st.expander(f"Groups — {len(groups)} topics", expanded=False):
                 for j, group in enumerate(groups):
                     titles = " · ".join(t for t, _, _, _ in group)
                     st.markdown(f"`{j + 1}` &nbsp;{titles}")
 
-    # ── Callbacks ──────────────────────────────────────────────────────────────
-    def on_progress(msg: str, pct: float) -> None:
-        progress_bar.progress(pct, text=msg)
 
-    def on_step(event: str, data) -> None:
-        if event == "segment":
-            fi, n_files, file_name, n_sections = data
-            files_acc.append((file_name, n_sections))
-            _render_files(collapsed=(fi == n_files - 1))
-        elif event == "section":
-            i, n, title, label = data
-            sections_acc.append((title, label))
-            _render_sections(collapsed=(i == n - 1))
-        elif event == "groups":
-            groups: list = data
-            _render_sections(collapsed=True)
-            _render_groups(groups)
-            # Store group labels for DONE stage tabs
-            st.session_state.group_labels = [
-                (t for t, _, _, _ in group).__next__()[:40]
-                for group in groups
-            ]
-        elif event == "written_labels":
-            # Final labels for only the groups that actually produced content
-            # (some are dropped by the SKIP gate during writing).
-            st.session_state.group_labels = data
-
-    # ── Extract ────────────────────────────────────────────────────────────────
+def _extract(file_data, vision_enabled, vision_client, progress) -> dict[str, str]:
     extracted: dict[str, str] = {}
     n_files = len(file_data)
-    vision_enabled = is_vision_model(model)
-    vision_client = Client(host=OLLAMA_HOST) if vision_enabled else None
-
-    # Route the text phases to a text-only model when the selected model is a VL
-    # model and the text model is installed; otherwise reuse the selected model.
-    text_model = TEXT_MODEL if (vision_enabled and TEXT_MODEL in models) else model
-    if text_model != model:
-        st.caption(f"Vision: `{model}` · Text: `{text_model}`")
     for i, d in enumerate(file_data):
-        file_base = i / n_files * 0.05
-        file_range = 1 / n_files * 0.05
-        progress_bar.progress(file_base, text=f"Extracting {d['name']}…")
+        base, rng = i / n_files * 0.05, 1 / n_files * 0.05
+        progress.progress(base, text=f"Extracting {d['name']}…")
 
-        def _on_page(page_idx: int, total: int, _d=d, _fb=file_base, _fr=file_range) -> None:
-            pct = _fb + _fr * (page_idx + 1) / total
-            progress_bar.progress(
-                min(pct, _fb + _fr),
-                text=f"Extracting page {page_idx + 1} of {total} from {_d['name']}…",
+        def on_page(idx, total, _d=d, _b=base, _r=rng):
+            progress.progress(
+                min(_b + _r * (idx + 1) / total, _b + _r),
+                text=f"Extracting page {idx + 1} of {total} from {_d['name']}…",
             )
 
         try:
-            extracted[f"File {i + 1} of {n_files}: {d['name']}"] = (
-                ingest.extract_text(
-                    d["name"], d["bytes"],
-                    vision_model=model if vision_enabled else "",
-                    client=vision_client,
-                    on_page=_on_page,
-                )
+            key = f"File {i + 1} of {n_files}: {d['name']}"
+            extracted[key] = ingest.extract_text(
+                d["name"], d["bytes"],
+                vision_model=DEFAULT_MODEL if vision_enabled else "",
+                client=vision_client, on_page=on_page,
             )
         except Exception as exc:
             st.warning(f"Could not extract **{d['name']}**: {exc}")
+    return extracted
 
+
+def render_running(models: list[str]) -> None:
+    file_data = st.session_state.file_data
+    st.subheader("Summarising")
+    st.caption(_files_label([d["name"] for d in file_data]))
+    progress = st.progress(0.0, text="Starting…")
+
+    vision_enabled = is_vision_model(DEFAULT_MODEL)
+    vision_client = Client(host=OLLAMA_HOST) if vision_enabled else None
+    text_model = TEXT_MODEL if (vision_enabled and TEXT_MODEL in models) else DEFAULT_MODEL
+
+    view = _ProgressView()
+    extracted = _extract(file_data, vision_enabled, vision_client, progress)
     if not extracted:
         st.error("No text could be extracted from the uploaded files.")
         if st.button("↩ Start over"):
-            st.session_state.stage = "idle"
+            _reset()
             st.rerun()
         st.stop()
 
-    combined = "\n\n---\n\n".join(
-        f"# {name}\n\n{text}" for name, text in extracted.items()
-    )
+    combined = "\n\n---\n\n".join(f"# {name}\n\n{text}" for name, text in extracted.items())
 
-    # Free the vision model before the text phases load a second model — keeps
-    # peak RAM at ~max(vision, text) instead of the sum (matters on low RAM).
-    if vision_client and text_model != model:
+    # Free the vision model before the text model loads — keeps peak RAM ~max, not sum.
+    if vision_client and text_model != DEFAULT_MODEL:
         try:
-            vision_client.chat(model=model, messages=[], keep_alive=0)
+            vision_client.chat(model=DEFAULT_MODEL, messages=[], keep_alive=0)
         except Exception:
             pass
 
-    # ── Run pipeline + stream into fixed-height container ─────────────────────
     stream = summarize.summarize_mapreduce(
-        combined, text_model, depth, proficiency,
-        on_progress=on_progress,
-        on_step=on_step,
+        combined, text_model, _DEPTH, _LEVEL,
+        on_progress=lambda msg, pct: progress.progress(pct, text=msg),
+        on_step=view.on_step,
     )
-
     st.markdown("**Summary**")
     with st.container(height=_SUMMARY_HEIGHT, border=True, autoscroll=True):
         result = st.write_stream(stream)
 
-    summary: str = result if isinstance(result, str) else "".join(result)
-    summary = _fix_latex(summary)
-    progress_bar.empty()
+    summary = _fix_latex(result if isinstance(result, str) else "".join(result))
+    progress.empty()
+
     st.session_state.last_summary = summary
-    # Fresh run — clear any prior flashcard state so it doesn't bleed across runs.
-    for k in ("flashcards", "flashcards_apkg", "used_parts", "flashcards_note"):
-        st.session_state.pop(k, None)
+    st.session_state.pop("flashcards", None)
+    st.session_state.pop("flashcards_apkg", None)
     try:
         st.session_state.run_id = append_run(
-            files=[d["name"] for d in file_data],
-            model=model,
-            depth=depth,
-            proficiency=proficiency,
-            summary=summary,
+            files=[d["name"] for d in file_data], model=DEFAULT_MODEL,
+            depth=_DEPTH, proficiency=_LEVEL, summary=summary,
             group_labels=st.session_state.get("group_labels", []),
         )
     except Exception:
@@ -275,137 +343,102 @@ elif st.session_state.stage == "running":
     st.session_state.stage = "done"
     st.rerun()
 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# DONE — results
+# DONE — result canvas
 # ══════════════════════════════════════════════════════════════════════════════
-elif st.session_state.stage == "done":
-    file_data = st.session_state.file_data
-    summary: str = st.session_state.last_summary
-    group_labels: list[str] = st.session_state.get("group_labels", [])
-
-    col_files, col_reset = st.columns([6, 1])
-    with col_files:
-        st.markdown("  ".join(f"`{d['name']}`" for d in file_data))
-    with col_reset:
-        if st.button("↩", help="Start over"):
-            for key in [
-                "stage", "file_data", "last_summary",
-                "selected_model", "summary_depth", "proficiency", "group_labels",
-                "flashcards", "flashcards_apkg", "used_parts", "run_id",
-                "flashcards_note",
-            ]:
-                st.session_state.pop(key, None)
-            st.rerun()
-
-    st.divider()
-
-    # Split by group separators written during Phase 3
+def render_done() -> None:
+    summary = st.session_state.last_summary
+    files = [d["name"] for d in st.session_state.file_data]
     parts = [p.strip() for p in summary.split("\n\n---\n\n") if p.strip()]
 
-    if len(parts) > 1:
-        # Label tabs/options: use stored first-section title, fall back to "Part N"
-        tab_names = []
-        for i in range(len(parts)):
-            if i < len(group_labels) and group_labels[i]:
-                tab_names.append(group_labels[i])
-            else:
-                tab_names.append(f"Part {i + 1}")
+    head, actions = st.columns([5, 1], vertical_alignment="center")
+    with head:
+        st.subheader(_files_label(files))
+        src = f" · {len(files)} sources" if len(files) > 1 else ""
+        st.caption(f"AI-generated summary{src}")
+    with actions:
+        with st.popover("Download", use_container_width=True):
+            with st.container(key="dl_menu"):
+                st.download_button(
+                    "Markdown (.md)", data=summary, file_name="summary.md",
+                    mime="text/markdown", use_container_width=True,
+                )
+                st.download_button(
+                    "Plain text (.txt)", data=summary, file_name="summary.txt",
+                    mime="text/plain", use_container_width=True,
+                )
 
-        if len(parts) <= 10:
-            tabs = st.tabs(tab_names)
-            for tab, part in zip(tabs, parts):
-                with tab:
-                    with st.container(height=_SUMMARY_HEIGHT, border=False):
-                        st.markdown(part)
-        else:
-            selected_idx = st.selectbox(
-                "Topic",
-                range(len(tab_names)),
-                format_func=lambda i: f"{i + 1}. {tab_names[i]}",
-            )
-            with st.container(height=_SUMMARY_HEIGHT, border=False):
-                st.markdown(parts[selected_idx])
-    else:
-        with st.container(height=_SUMMARY_HEIGHT, border=False):
-            st.markdown(summary)
+    tab_summary, tab_cards = st.tabs(["Summary", "Flashcards"])
+    with tab_summary:
+        _render_summary(parts, summary, st.session_state.get("group_labels", []))
+    with tab_cards:
+        _render_flashcards(parts)
 
-    st.divider()
 
-    dl1, dl2 = st.columns(2)
-    with dl1:
-        st.download_button(
-            "⬇ Download (.md)",
-            data=summary,
-            file_name="summary.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-    with dl2:
-        st.download_button(
-            "⬇ Download (.txt)",
-            data=summary,
-            file_name="summary.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
+def _render_summary(parts: list[str], summary: str, labels: list[str]) -> None:
+    if len(parts) <= 1:
+        st.markdown(summary)
+        return
 
-    # ── Flashcards (on-demand, topic-rotated, accumulated) ─────────────────────
-    # The session holds the live deck (source of truth); each generation pulls a
-    # random batch of previously-unused summary topics (temperature 0 → faithful),
-    # merges the new cards in, and mirrors the full deck to the run's history entry.
-    st.divider()
-    st.markdown("**Flashcards**")
-    st.caption("Anki Q&A cards generated from the summary above — grounded in its facts only.")
+    names = [
+        labels[i] if i < len(labels) and labels[i] else f"Part {i + 1}"
+        for i in range(len(parts))
+    ]
+    idx = st.selectbox(
+        "Topic", range(len(names)),
+        format_func=lambda i: f"{i + 1}.  {names[i]}",
+        label_visibility="collapsed",
+    )
+    st.markdown(parts[idx])
 
-    note = st.session_state.pop("flashcards_note", None)
-    if note:
-        st.caption(note)
 
-    n_parts = len(parts)
-    deck: list[tuple] = list(st.session_state.get("flashcards") or [])
-    used = set(st.session_state.get("used_parts") or [])
-    unused = sorted(i for i in range(n_parts) if i not in used)
-
-    if not unused:
-        st.caption(
-            f"All {n_parts} topics covered — {len(deck)} cards."
-            if deck else "No topics with content to turn into cards."
-        )
-    else:
-        label = "🃏 Generate more flashcards" if deck else "🃏 Generate flashcards"
-        if st.button(label, use_container_width=True):
-            import random
-            batch = random.sample(unused, min(_PARTS_PER_GEN, len(unused)))
-            with st.spinner("Generating flashcards…"):
-                new_cards = flashcards.generate_cards([parts[i] for i in batch])
-            seen = {q.strip().lower() for q, _ in deck}
-            added = 0
-            for q, a in new_cards:
-                key = q.strip().lower()
-                if key and key not in seen:
-                    seen.add(key)
-                    deck.append((q, a))
-                    added += 1
-            used.update(batch)  # spent even if dry, so we advance instead of retrying
-            st.session_state.flashcards = deck
-            st.session_state.used_parts = sorted(used)
-            st.session_state.flashcards_apkg = flashcards.build_apkg(deck) if deck else b""
-            save_flashcards(st.session_state.get("run_id", ""), deck, used)
-            st.session_state.flashcards_note = (
-                f"Added {added} card{'s' if added != 1 else ''}."
-                if added else "Those topics had no new cards."
-            )
-            st.rerun()
+def _render_flashcards(parts: list[str]) -> None:
+    deck = list(st.session_state.get("flashcards") or [])
 
     if deck:
-        covered = len([i for i in range(n_parts) if i in used])
-        st.caption(f"{len(deck)} cards · {covered}/{n_parts} topics used")
-        st.iframe(flashcards.cards_widget_html(deck), height=420)
+        st.iframe(flashcards.cards_widget_html(deck), height=_CARD_HEIGHT)
         st.download_button(
-            "⬇ Download deck (.apkg)",
+            "Download deck (.apkg)",
             data=st.session_state.get("flashcards_apkg", b""),
-            file_name="flashcards.apkg",
-            mime="application/octet-stream",
-            on_click="ignore",
-            use_container_width=True,
+            file_name="flashcards.apkg", mime="application/octet-stream",
+            on_click="ignore", use_container_width=True,
         )
+        return
+
+    if st.button("Generate flashcards", type="primary", use_container_width=True):
+        with st.spinner("Generating flashcards…"):
+            deck = flashcards.generate_cards(parts)
+        st.session_state.flashcards = deck
+        st.session_state.flashcards_apkg = flashcards.build_apkg(deck) if deck else b""
+        save_flashcards(st.session_state.get("run_id", ""), deck)
+        if deck:
+            st.rerun()
+        else:
+            st.warning("Couldn't generate flashcards from this summary.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Entry
+# ══════════════════════════════════════════════════════════════════════════════
+def main() -> None:
+    st.set_page_config(
+        page_title="Summaries and Flashcards", page_icon="📄",
+        layout="centered", initial_sidebar_state="expanded",
+    )
+    models = _require_ready()
+    st.session_state.setdefault("stage", "idle")
+
+    st.markdown(_APP_CSS, unsafe_allow_html=True)
+    render_sidebar()
+
+    stage = st.session_state.stage
+    if stage == "running":
+        render_running(models)
+    elif stage == "done":
+        render_done()
+    else:
+        render_idle()
+
+
+main()

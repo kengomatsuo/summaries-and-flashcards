@@ -1,5 +1,215 @@
 [
   {
+    "id": "3456656b3da74fa3811a021ff89d3356",
+    "timestamp": "2026-06-08 01:15",
+    "files": [
+      "DSHBA_20260416.pdf"
+    ],
+    "model": "qwen2.5vl:3b",
+    "depth": "In-depth",
+    "proficiency": "Beginner",
+    "summary": "An introduction to Data Science for Human Behavior Analysis. The instructor is Tipporn Laohakangvalvit, and she teaches as part of the Innovative Global Program at the College of Engineering. No specific details about the content of the lectures were provided in the notes.\n\n---\n\nAn overview of the course structure, including its schedule and materials. The course is held every Thursday during the 2nd period from 10:50 to 12:30. All classes will be conducted in English. Course materials will be uploaded on MS Teams after each class.\n\nThe instructor for this course is Tipporn Laohakangvalvit, who is part of the Innovative Global Program at the College of Engineering. Her office is located in IGP Open Lab on the 11th floor of Main Building. Office hours are available immediately after class or by appointment. Students should contact her in advance to schedule an appointment via email at tipporn@shibaura-it.ac.jp.\n\n---\n\nA course format that is delivered in a face-to-face interactive style. The activities include short lectures and discussions on related topics, as well as individual and group projects. These projects involve both in-class exercises and assignments.\n\n---\n\nSeveral key concepts in data science, specifically focusing on how these techniques can be applied to analyze human behavior data. The main topics included statistical analysis and visualization methods for understanding human behavior patterns, as well as modeling approaches used to predict or explain such behaviors. Additionally, there was a focus on interpreting the results of human behavior data analyses.\n\n---\n\nThree main goals for the students:\n\n1. **Explain the core concept of a data science pipeline**: This involves understanding how data is collected, processed, analyzed, and used to derive insights or make decisions.\n\n2. **Analyze and interpret data related to human behavior**: Students were expected to understand and work with datasets that reflect patterns and trends in human actions, interactions, and behaviors.\n\n3. **Discuss the effective use of data science in human behavior analysis**: This goal aimed at helping students grasp how data science techniques can be applied to analyze and improve understanding of human behavior in various domains.\n\n---\n\nThe provided text does not contain any actual lecture notes or content to summarize. Therefore, there is nothing for me to summarize based on the information given. Please provide the lecture notes so I can assist you with summarizing them.\n\n---\n\nA grading system where scores are determined based on the quality of contents in reports/presentations, remarks during discussions, and participation in class activities. The grading structure includes:\n\n- 40% for in-class exercises and assignments.\n- 60% for mid-term and final examinations.\n\nLate submissions will result in half-point deduction, and a minimum score of 60% is required to receive credit.\n\n---\n\nHow to get help. Students can seek assistance through Microsoft Teams. They should discuss their questions in the QA channel, where the professor will try to answer when available. It is advised not to send individual messages as they might take time to be replied to. Additionally, students are encouraged to assist their classmates by replying to their queries on the topic they know.\n\n---\n\nThe slide titled \"About Me\" provides information about Tipporn Laohakangvalvit, who is identified as Tip. It also mentions her affiliation with Affective Technologies Laboratory. \n\nBelow this introduction, there is a detailed description of a diagram that visually represents research themes in affective computing and data science. The main Venn diagram consists of two overlapping circles: the left circle labeled \"Affective Computing (Human-oriented)\" includes sub-points such as human behavior and emotion analysis, healthcare/human error prediction, and daily-life monitoring and analysis. The right circle titled \"Data Science + Biosignal Processing\" features sub-points like product design by user emotion/impression, user-friendly design and evaluation, and cute/kawaii design and fashion.\n\nThe overlapping area between the two circles is labeled as \"Modeling.\" Additionally, there are four icons surrounding the main diagram, each representing different aspects of affective computing. These include a blue robot with headphones and a speech bubble saying \"HAPPY,\" a person with a sad face and a brain icon next to it, a person working on a laptop looking happy, and a robot with a cheerful expression.\n\nThe slide number is indicated in the bottom right corner as \"10.\"\n\n---\n\n### Summary of the Lecture Theory\n\n#### What is Data Science?\n\nData science involves using statistical methods, machine learning algorithms, and domain expertise to extract meaningful insights from large datasets. It aims to uncover patterns, trends, and correlations within data that can inform decision-making processes.\n\n#### Overview of Data Science Process\n\nThe process typically includes several key steps: \n1. **Understanding the Problem**: Clearly defining what needs to be analyzed or understood.\n2. **Data Collection**: Gathering relevant data from various sources.\n3. **Data Cleaning**: Removing errors, inconsistencies, and irrelevant information from the dataset.\n4. **Exploratory Data Analysis (EDA)**: Analyzing the cleaned data to understand its structure and identify patterns.\n5. **Modeling**: Applying statistical models or machine learning algorithms to predict outcomes or make decisions based on the data.\n6. **Evaluation**: Assessing the performance of the model using appropriate metrics.\n7. **Deployment**: Implementing the insights gained from the analysis in real-world applications.\n\n#### Tools and Techniques in Data Science\n\nData science relies on a variety of tools and techniques, including:\n- **Programming Languages**: Python and R are commonly used for data manipulation, analysis, and visualization.\n- **Libraries and Frameworks**: Libraries like NumPy, Pandas, Matplotlib, Seaborn, Scikit-Learn, TensorFlow, and PyTorch provide functionalities for handling data, creating visualizations, and implementing machine learning models.\n- **Databases**: SQL databases are used to store structured data efficiently. NoSQL databases are suitable for unstructured or semi-structured data.\n- **Cloud Services**: Platforms like AWS, Google Cloud, and Azure offer scalable computing resources and storage solutions for large datasets.\n\n#### The Importance of Data Science for Human Behavior Analysis\n\nData science plays a crucial role in understanding human behavior by:\n1. **Analyzing Social Media Data**: Extracting insights from social media interactions to understand public sentiment, trends, and preferences.\n2. **Behavioral Analytics**: Using historical data to predict future behaviors or outcomes based on patterns observed in past actions.\n3. **Personalized Marketing**: Tailoring marketing strategies to individual customers by analyzing their purchase history, browsing behavior, and demographic information.\n\nThese steps provide a comprehensive overview of the lecture's content without adding any extraneous details or personal opinions.\n\n---\n\n### Summary of the Lecture Theory\n\n#### What is Data Science?\n\nData science involves using statistical methods, machine learning algorithms, and domain expertise to extract meaningful insights from large datasets. It aims to uncover patterns, trends, and correlations within data that can inform decision-making processes.\n\n#### Overview of Data Science Process\n\nThe process typically includes several key steps: \n1. **Understanding the Problem**: Clearly defining what needs to be analyzed or understood.\n2. **Data Collection**: Gathering relevant data from various sources.\n3. **Data Cleaning**: Removing errors, inconsistencies, and irrelevant information from the dataset.\n4. **Exploratory Data Analysis (EDA)**: Analyzing the cleaned data to understand its structure and identify patterns.\n5. **Modeling**: Applying statistical models or machine learning algorithms to predict outcomes or make decisions based on the data.\n6. **Evaluation**: Assessing the performance of the model using appropriate metrics.\n7. **Deployment**: Implementing the insights gained from the analysis in real-world applications.\n\n#### Tools and Techniques in Data Science\n\nData science relies on a variety of tools and techniques, including:\n- **Programming Languages**: Python and R are commonly used for data manipulation, analysis, and visualization.\n- **Libraries and Frameworks**: Libraries like NumPy, Pandas, Matplotlib, Seaborn, Scikit-Learn, TensorFlow, and PyTorch provide functionalities for handling data, creating visualizations, and implementing machine learning models.\n- **Databases**: SQL databases are used to store structured data efficiently. NoSQL databases are suitable for unstructured or semi-structured data.\n- **Cloud Services**: Platforms like AWS, Google Cloud, and Azure offer scalable computing resources and storage solutions for large datasets.\n\n#### The Importance of Data Science for Human Behavior Analysis\n\nData science plays a crucial role in understanding human behavior by:\n1. **Analyzing Social Media Data**: Extracting insights from social media interactions to understand public sentiment, trends, and preferences.\n2. **Behavioral Analytics**: Using historical data to predict future behaviors or outcomes based on patterns observed in past actions.\n3. **Personalized Marketing**: Tailoring marketing strategies to individual customers by analyzing their purchase history, browsing behavior, and demographic information.\n\nThese steps provide a comprehensive overview of the lecture's content without adding any extraneous details or personal opinions.\n\n---\n\n10 best domains for people starting a career in data science. These domains are:\n\n1. Fraud and Risk Detection\n2. Healthcare\n3. Internet Search\n4. Targeted Advertising\n5. Road Travel\n6. Government\n7. Website Recommendations\n8. Advanced Image Recognition\n9. Speech Recognition\n10. Gaming\n\nThese domains represent various areas where data science can be applied to solve problems or improve services.\n\n---\n\nWhat data science is and how it combines various disciplines to analyze and interpret complex datasets. Specifically, data science involves using statistical and computational methods to extract insights from data. It integrates techniques from mathematics, statistics, computer science, and domain-specific fields such as business or a particular industry.\n\nTo visualize this integration, there was also a Venn diagram provided in the notes. The Venn diagram included labels for Computer Science, Machine Learning, Maths & Statistics, Data Analysis, Traditional Software, and Business / Domain Expertise. This diagram helps illustrate how these different areas overlap and contribute to data science.\n\n---\n\nSeveral key points related to the importance of data science. The main idea is that businesses are generating vast amounts of data at an exponential rate. Data scientists use this data to identify patterns and trends, make predictions about future events, and support decision-making processes. By doing so, they can help improve efficiency, increase revenue, and achieve better outcomes for organizations.\n\n---\n\nA simple instruction for taking a quiz. Students were instructed to go directly to their classwork section in Microsoft Teams and select the Quiz 1 option to begin the assessment.\n\n---\n\nFive applications that use data science:\n\na) Netflix uses data science to personalize movie recommendations.\nb) Google uses data science to improve search engine performance.\nc) Facebook uses data science to optimize advertising algorithms.\nd) PayPal uses data science to identify fraudulent transactions.\ne) ChatGPT uses data science to provide answers based on a massive text dataset.\n\nAt the end of the slide, there was an emoji with \"How????\" and a thinking face indicating that this information is provided without further explanation.\n\n---\n\n### Summary of the Lecture Theory\n\n#### What is Data Science?\n\nData science involves using scientific methods, processes, algorithms, and systems to extract knowledge and insights from data. It encompasses various fields such as statistics, machine learning, databases, and visualization.\n\n#### Overview of Data Science Process\n\nThe process typically includes several steps: understanding the problem (Define), collecting relevant data (Acquire), processing and cleaning the data (Prepare), analyzing the data using statistical or machine learning methods (Analyze), interpreting the results to draw conclusions (Communicate), and finally, applying these insights to make decisions or solve problems (Act).\n\n#### Tools and Techniques in Data Science\n\nData science relies on a variety of tools and techniques. These include programming languages like Python and R for data manipulation and analysis; databases such as SQL for managing structured data; visualization libraries like Matplotlib and Seaborn for creating graphs and charts to represent data visually; machine learning frameworks like TensorFlow or PyTorch for building predictive models; and cloud platforms like AWS, Google Cloud, or Azure for scalable computing resources.\n\n#### The Importance of Data Science for Human Behavior Analysis\n\nData science plays a crucial role in understanding human behavior by analyzing large datasets related to consumer preferences, social media interactions, health records, etc. By identifying patterns and trends, data scientists can develop models that predict future behaviors, optimize marketing strategies, improve healthcare outcomes, or enhance user experiences on websites and applications.\n\n---\n\nA systematic process for conducting data science projects. This process includes several key steps:\n\n1. **Define the Problem**: The first step involves clearly defining the problem or question to be addressed using data.\n   \n2. **Data Collection and Cleaning**: After defining the problem, the next phase is collecting relevant data. Data cleaning follows, where any inconsistencies, missing values, or errors are corrected.\n\n3. **Exploratory Data Analysis (EDA)**: Once the data is cleaned, EDA is performed to understand the characteristics of the dataset, identify patterns, and detect anomalies.\n\n4. **Modeling**: Based on the insights gained from EDA, models are developed to analyze the data and answer the defined problem or question.\n\n5. **Evaluation and Refinement**: The model's performance is evaluated against predefined criteria. If necessary, the model is refined based on feedback and further analysis.\n\n6. **Deployment**: Once satisfied with the model’s performance, it can be deployed in a real-world setting to make predictions or decisions.\n\nThroughout this process, data scientists must also consider ethical and legal implications such as ensuring data privacy and security.\n\n---\n\nThe OSEMN Framework for data analysis. The framework consists of five steps:\n\n1. **Obtain** involves gathering data from various sources.\n2. **Scrub** entails cleaning and organizing the data, including handling missing values.\n3. **Explore** uses statistical methods to identify patterns and trends in the data.\n4. **Model** applies machine learning algorithms to derive useful insights for decision-making.\n5. **Interpret** draws meaningful conclusions that are relevant to business applications, focusing on the least technical aspects of the analysis.\n\nEach step builds upon the previous one, ensuring a comprehensive approach to understanding and utilizing data effectively.\n\n---\n\nA comprehensive overview of the skills required for a data scientist, categorized into three main areas: Data Science Skills in Analytics, Technology Skills, and Entrepreneurship Skills. \n\n**Skills in Analytics** include:\n- Statistics\n- Artificial Intelligence\n- Predictive Modeling\n- Machine Learning\n- Natural Language Processing\n- Information Retrieval\n- Feature Engineering\n- Big Data\n- Data Warehousing\n- Databases\n- Data Management\n\n**Technology Skills** encompass:\n- Programming\n- Cloud / Distributed Systems\n- Privacy & Security\n- Complexity & Parallel Processing\n- Scientific Mindset\n- Business Thinking\n- Creative & Expressive\n- Impartation\n- Communication\n- Data Product Design\n\n**Entrepreneurship Skills** are:\n- Ethics & Values\n- Service Engineering\n- Domain Knowledge\n- Law\n\n---\n\nThe popularity of data science is not solely due to its use of fancy and latest scientific knowledge. Instead, it stems from a process called DATIFICATION, which involves quantifying aspects of the world that have never been measured before. This process occurs at both personal and business levels.\n\nAt the personal level, individuals generate vast amounts of data through various activities such as reading books, watching films, eating food, exercising, making purchases, driving, and even sharing their thoughts on social media platforms. In the future, our gaze could also be captured by wearable devices that track vision activity.\n\nOn a business level, data science leverages structured data from sources like web activity logs, computer network activity, machinery signals, and unstructured data such as written reports, emails, voice recordings, and other forms of communication. This comprehensive approach to collecting and analyzing data is what makes data science popular and valuable in today's world.\n\n---\n\n### Summary of the Lecture Theory\n\n#### What is Data Science?\n\nData science involves using scientific methods, processes, algorithms, and systems to extract knowledge and insights from data. It encompasses various fields such as statistics, machine learning, databases, and visualization.\n\n#### Overview of Data Science Process\n\nThe process typically includes several steps: \n1. **Understanding the Problem**: Identifying what needs to be analyzed or understood.\n2. **Data Collection**: Gathering relevant data for analysis.\n3. **Data Cleaning**: Removing or correcting errors in the collected data.\n4. **Exploratory Data Analysis (EDA)**: Initial examination of the data set to summarize its main characteristics, often with visual methods.\n5. **Modeling and Prediction**: Using statistical techniques or machine learning algorithms to build models that can predict outcomes based on historical data.\n6. **Evaluation and Validation**: Assessing how well the model performs using metrics such as accuracy, precision, recall, etc.\n7. **Deployment**: Implementing the model in a real-world application.\n\n#### Tools and Techniques in Data Science\n\nData science relies heavily on various tools and techniques:\n- **Programming Languages**: Python and R are commonly used for data analysis and modeling.\n- **Libraries and Frameworks**: Libraries like NumPy, Pandas, Matplotlib, Seaborn, Scikit-Learn, TensorFlow, PyTorch for numerical operations, data manipulation, visualization, and machine learning respectively.\n- **Databases**: Relational databases (SQL) and NoSQL databases are used to store large volumes of structured or unstructured data.\n- **Visualization Tools**: Libraries like Matplotlib, Seaborn, Plotly, Tableau for creating informative visual representations of data.\n\n#### The Importance of Data Science for Human Behavior Analysis\n\nData science plays a crucial role in understanding human behavior by:\n- Analyzing patterns and trends in consumer preferences, purchasing behaviors, social media interactions.\n- Predicting future trends based on historical data to inform marketing strategies or product development.\n- Identifying customer segments and personalizing services to improve user experience.\n\nThis summary covers the key points discussed in the lecture notes without adding any extraneous information.\n\n---\n\nA summary of tools and techniques used by data scientists. These include Python, Numpy for general mathematical operations, SciPy for detailed mathematical operations, Pandas for data manipulations such as cleaning, analyzing, and exploring, and Scikit-Learn for machine learning modeling.\n\n---\n\nA grid divided into five sections, detailing various tools and technologies related to data storage, transformation, model building, visualization, and other tools. Here is an overview:\n\n1. **Data Store**: \n   - MongoDB\n   - MySQL\n\n2. **Transform**:\n   - Spark\n   - Pandas\n   - SQL\n\n3. **Model**:\n   - TensorFlow\n   - Keras\n   - OpenAI (likely referring to the AI library)\n   - SpaCy\n   - Statsmodels\n   - Scipy\n   - Jupyter\n   - R Studio\n\n4. **Visualize**:\n   - Shiny\n   - Tableau\n   - Alteryx\n   - KNIME\n   - Matplotlib\n   - Dask\n\n5. **Other Tools**:\n   - Kafka\n   - Luigi\n   - Python\n   - Flask\n   - Express\n   - Go\n   - Node.js\n   - Elastic\n   - Presto\n   - MongoDB (repeated)\n   - Svelte\n   - Vue.js\n   - React\n   - Angular\n\nThe grid includes logos and icons representing each tool or technology listed.\n\n---\n\nThe slide contains a POP QUIZ! prompt with the words \"POP\" and \"QUIZ!\" displayed in bold, playful fonts on opposite sides of the screen. The word \"POP\" has a red background while \"QUIZ!\" has a blue background with an exclamation mark at the end. Below these words is a diagram of a light blue paper airplane flying towards them, surrounded by dashed lines that create a dynamic effect. Additionally, there is text indicating that one should go to Quiz 2 and a number 30 in the bottom right corner of the slide.\n\n---\n\n### Summary of the Lecture Theory\n\n#### What is Data Science?\n\nData science involves using scientific methods, processes, algorithms, and systems to extract knowledge and insights from data. It encompasses various fields such as statistics, machine learning, databases, and visualization.\n\n#### Overview of Data Science Process\n\nThe process typically includes several steps: \n1. **Understanding the Problem**: Identifying what needs to be analyzed or understood.\n2. **Data Collection**: Gathering relevant data for analysis.\n3. **Data Cleaning**: Removing or correcting errors in the collected data.\n4. **Exploratory Data Analysis (EDA)**: Initial examination of the data set to summarize its main characteristics, often with visual methods.\n5. **Modeling and Prediction**: Using statistical techniques or machine learning algorithms to build models that can predict outcomes based on historical data.\n6. **Evaluation and Validation**: Assessing how well the model performs using metrics such as accuracy, precision, recall, etc.\n7. **Deployment**: Implementing the model in a real-world application.\n\n#### Tools and Techniques in Data Science\n\nData science relies heavily on various tools and techniques:\n- **Programming Languages**: Python and R are commonly used for data analysis and modeling.\n- **Libraries and Frameworks**: Libraries like NumPy, Pandas, Matplotlib, Seaborn, Scikit-Learn, TensorFlow, PyTorch for numerical operations, data manipulation, visualization, and machine learning respectively.\n- **Databases**: SQL databases (like MySQL, PostgreSQL) are used to store structured data efficiently.\n- **Visualization Tools**: Libraries like Matplotlib, Seaborn, Plotly for creating informative visualizations.\n- **Machine Learning Algorithms**: Techniques such as regression, classification, clustering, decision trees, neural networks.\n\n#### The Importance of Data Science for Human Behavior Analysis\n\nData science plays a crucial role in understanding human behavior by:\n- Analyzing large datasets to identify patterns and trends related to consumer preferences, market behaviors, social interactions, etc.\n- Predicting future outcomes based on historical data.\n- Personalizing experiences through targeted marketing or product recommendations.\n\nThis summary covers the key points discussed in today's lecture without adding any extraneous information.\n\n---\n\nHuman behavior refers to the potential and expressed capacity (mentally, physically, and socially) of human individuals or groups to respond to internal and external stimuli throughout their life. In scientific research, human behavior is understood as a complex interplay involving three components: action, cognition, and emotion.\n\n---\n\nA circular diagram that illustrates the relationship between action, cognition, and emotion. The components are interconnected in a flow indicating their influence on each other.\n\n1. **Action**: This is represented by the phrase \"I go to this restaurant every Fridays.\" It refers to an intentional behavior or activity.\n2. **Cognition**: This is represented by the phrase \"I have to remember to buy groceries.\" Cognition involves mental processes such as remembering and planning, which are influenced by the action.\n3. **Emotion**: This is represented by the phrase \"I like the spaghetti at this restaurant.\" Emotion refers to feelings or emotional responses related to the action.\n\nThe circular flow in the diagram shows that an action leads to cognition (such as remembering), which then influences emotion (liking something). Conversely, emotions can also influence actions and cognition.\n\n---\n\nThe slide titled \"Action, Cognition, and Emotion\" focuses on explaining how people process information through actions, cognition, and emotions. It uses a circular flowchart to illustrate this process, with arrows labeled \"Feel,\" \"Think,\" and \"Act.\"\n\n- **Feel**: This is represented by the \"Feel\" arrow in red, which points from the left side of the circle towards the center. It suggests that people experience feelings or sensations.\n  \n- **Think**: The \"Think\" arrow is blue and points clockwise from the center outwards. This represents the cognitive process where individuals think about their experiences.\n\n- **Act**: The \"Act\" arrow is green and points counterclockwise from the center outwards, indicating the action that results from thinking.\n\nThe slide also includes text blocks describing examples of actions, cognition, and emotions:\n\n1. \"I like the spaghetti at this restaurant.\" This describes an emotional response (like) to a cognitive experience (liking something).\n2. \"I go to this restaurant every Fridays.\" This is an example of an action taken based on previous thoughts or feelings.\n3. \"How to get data?\" and \"I have to remember to buy groceries.\" These examples illustrate the need for cognition in order to take actions, such as remembering tasks.\n\nThe slide uses color coding to highlight these concepts:\n- **Action** is highlighted in green.\n- **Explicit** and **Implicit** are not defined or explained within this slide but appear as labels on other slides.\n  \nFinally, the number 34 appears at the bottom right corner of the slide.\n\n---\n\nSources of human behavior data. This includes various inputs from humans such as facial expressions, gestures captured from images and video, audio, text, and other modalities like bio-sensors for physiological measurements.\n\nData collection tools are diverse and include observation, surveys, online data crawling, cameras, microphones, and bio-sensors such as eye trackers, heart rate monitors, and brainwave sensors.\n\n---\n\nThe technology framework described in the notes is based on four categories of emotional measurement as proposed by Thoring & Mueller in 2016. These categories are:\n\n1. **Behavior**\n   - Autographer\n   - Drones\n   - Social Network Analysis\n   - Eye Tracking\n   - Fitness Tracker\n\n2. **Expression**\n   - Image Mining\n   - YouTube\n   - Instagram\n   - Motion Sensors\n   - Google Glass\n\n3. **Physiology**\n   - Time Series Data Mining\n   - Eye Tracking\n   - Smart Watch (Fitness Tracker)\n   - EEG Headset\n   - Facial Expression Recognition\n\n4. **Experience**\n   - Experience Sampling\n   - Sentiment Mining\n   - Amazon Mechanical Turk\n   - Facebook\n   - Twitter\n\nThe framework is visualized as a diagram divided into four quadrants, each corresponding to one of the categories:\n- The top left quadrant represents **Behavior** and includes icons for Autographer, Drones, Social Network Analysis, Eye Tracking, and Fitness Tracker.\n- The top right quadrant represents **Expression** and features icons for Image Mining, YouTube, Instagram, Motion Sensors, and Google Glass.\n- The bottom left quadrant covers **Physiology**, with icons for Time Series Data Mining, Eye Tracking, Smart Watch (Fitness Tracker), EEG Headset, and Facial Expression Recognition.\n- The bottom right quadrant is dedicated to **Experience** and displays icons for Experience Sampling, Sentiment Mining, Amazon Mechanical Turk, Facebook, and Twitter.\n\nThe slide is labeled \"Figure 2.3\" at the bottom left corner and has a page number of 36 in the bottom right corner.\n\n---\n\nThe importance of Data Science in Human Behavior Analysis. The goal is to identify patterns and trends in behavior that might not be apparent from individual observations. This analysis aims to understand complex human behaviors by examining data from various sources such as social media, mobile devices, and sensors. By doing so, it helps predict how people are likely to behave in the future.\n\n---\n\nThe lecture notes do not contain any specific lecture theory or content. The provided information is about a group work assignment where students are asked to pitch an idea using data science for customer behavior analysis, with the goal of convincing others to buy their product/service. The details include brainstorming ideas such as personalization of customer experiences, predictive analytics, healthcare analysis, crime prediction, and student behavior improvement in education. There is also a mention of presentation material guidelines that can be included on one slide.\n\n---\n\nDrone for Monitoring Student's Attention\n\nField of application:\nEducational support\n\nData source:\nStudent movement and facial expression captured by drone’s camera in real-time\n\nDS application:\nPrediction of student’s attention during the class and feedback+alert system for teachers\n\n---\n\nAn interactive quiz question titled \"Idea Pitch Rating.\" This quiz asks, \"How interesting is the idea to you?\" with multiple-choice options ranging from \"No vote (This is my group)\" to \"Not at all.\" Participants are also given a dropdown menu labeled \"Select your answer\" where they can choose their rating for the idea pitch.",
+    "group_labels": [
+      "Introduction to Data Science for",
+      "Overview",
+      "Course Format",
+      "Course Outline",
+      "Goals",
+      "Textbooks and References",
+      "Grading",
+      "How to get help",
+      "About Me",
+      "Today’s Topics",
+      "Today’s Topics",
+      "What are the domains in data science?",
+      "What is Data Science?",
+      "The Importance of Data Science",
+      "Go to Classwork > Quiz 1",
+      "Which application uses data science?",
+      "Today’s Topics",
+      "Data Science Process",
+      "OSEMN Framework",
+      "Data Science Skillset",
+      "Why is data science popular?",
+      "Today’s Topics",
+      "Toolboxes for Data Scientists",
+      "The slide contains a list of various too",
+      "The slide contains the following element",
+      "Today’s Topics",
+      "What is Human Behavior?",
+      "Action, Cognition, and Emotion",
+      "Action, Cognition, and Emotion",
+      "Sources of Human Behavior",
+      "The slide contains a technology framewor",
+      "Data Science x Human Behavior Analysis",
+      "Group Work: Idea Pitch",
+      "EXAMPLE:",
+      "Idea Pitch"
+    ],
+    "flashcards": [
+      {
+        "q": "When and where is the course held?",
+        "a": "Every Thursday during the 2nd period from 10:50 to 12:30. All classes will be conducted in English."
+      },
+      {
+        "q": "Who is the instructor for this course?",
+        "a": "Tipporn Laohakangvalvit."
+      },
+      {
+        "q": "What program does the instructor belong to?",
+        "a": "Innovative Global Program at the College of Engineering."
+      },
+      {
+        "q": "Where is the instructor's office located?",
+        "a": "IGP Open Lab on the 11th floor of Main Building."
+      },
+      {
+        "q": "When are the instructor's office hours available?",
+        "a": "Immediately after class or by appointment."
+      },
+      {
+        "q": "What are the types of activities included in the course format?",
+        "a": "Short lectures and discussions on related topics, individual and group projects."
+      },
+      {
+        "q": "How do students engage with their coursework during the course?",
+        "a": "Through in-class exercises and assignments."
+      },
+      {
+        "q": "What are key concepts in data science related to analyzing human behavior?",
+        "a": "Statistical analysis and visualization methods for understanding human behavior patterns, as well as modeling approaches used to predict or explain such behaviors."
+      },
+      {
+        "q": "How can statistical analysis be applied to understand human behavior?",
+        "a": "By identifying patterns and trends within the data using techniques like regression analysis and hypothesis testing."
+      },
+      {
+        "q": "What is the role of visualization in understanding human behavior?",
+        "a": "To help visualize complex data sets and relationships, making it easier to identify patterns and anomalies."
+      },
+      {
+        "q": "How are modeling approaches used in analyzing human behavior?",
+        "a": "To create predictive models that can forecast future behaviors based on historical data."
+      },
+      {
+        "q": "What is the importance of interpreting results in human behavior analysis?",
+        "a": "It helps in understanding the practical implications of the findings and their relevance to real-world applications."
+      },
+      {
+        "q": "What is the core concept of a data science pipeline?",
+        "a": "Understanding how data is collected, processed, analyzed, and used to derive insights or make decisions."
+      },
+      {
+        "q": "How do students work with datasets related to human behavior?",
+        "a": "By understanding patterns and trends in human actions, interactions, and behaviors."
+      },
+      {
+        "q": "What techniques can be applied using data science for human behavior analysis?",
+        "a": "Data science techniques are used to analyze and improve understanding of human behavior in various domains."
+      },
+      {
+        "q": "What percentage does in-class exercises and assignments contribute to the grading system?",
+        "a": "40%"
+      },
+      {
+        "q": "What percentage does mid-term and final examinations contribute to the grading system?",
+        "a": "60%"
+      },
+      {
+        "q": "What happens if a submission is late?",
+        "a": "Half-point deduction will be applied."
+      },
+      {
+        "q": "What is the minimum score required for credit?",
+        "a": "60%"
+      },
+      {
+        "q": "What platform do students use to seek help?",
+        "a": "Microsoft Teams"
+      },
+      {
+        "q": "Where should students post their questions for a quick response?",
+        "a": "QA channel in Microsoft Teams"
+      },
+      {
+        "q": "Who is responsible for answering student queries?",
+        "a": "The professor"
+      },
+      {
+        "q": "Is it recommended to send individual messages?",
+        "a": "No, as they might take time to be replied to"
+      },
+      {
+        "q": "What are students encouraged to do to assist their classmates?",
+        "a": "Reply to their queries on the topic they know"
+      },
+      {
+        "q": "What does the left circle of the main Venn diagram represent?",
+        "a": "Affective Computing (Human-oriented) including human behavior and emotion analysis, healthcare/human error prediction, and daily-life monitoring and analysis."
+      },
+      {
+        "q": "What does the right circle of the main Venn diagram represent?",
+        "a": "Data Science + Biosignal Processing including product design by user emotion/impression, user-friendly design and evaluation, and cute/kawaii design and fashion."
+      },
+      {
+        "q": "What is labeled in the overlapping area between the two circles?",
+        "a": "Modeling."
+      },
+      {
+        "q": "What do the four icons surrounding the main diagram represent?",
+        "a": "Different aspects of affective computing including a blue robot with headphones, a person with a sad face and brain icon, a person working on a laptop looking happy, and a robot with a cheerful expression."
+      },
+      {
+        "q": "What is Data Science?",
+        "a": "Data science involves using statistical methods, machine learning algorithms, and domain expertise to extract meaningful insights from large datasets."
+      },
+      {
+        "q": "What are the key steps in the data science process?",
+        "a": "The key steps include understanding the problem, data collection, data cleaning, exploratory data analysis (EDA), modeling, evaluation, and deployment."
+      },
+      {
+        "q": "What tools and techniques do data scientists use?",
+        "a": "- Programming languages: Python and R\n- Libraries and frameworks: NumPy, Pandas, Matplotlib, Seaborn, Scikit-Learn, TensorFlow, PyTorch\n- Databases: SQL databases and NoSQL databases\n- Cloud services: AWS, Google Cloud, Azure"
+      },
+      {
+        "q": "How does data science help in understanding human behavior?",
+        "a": "- Analyzing social media data to understand public sentiment, trends, and preferences.\n- Using historical data for behavioral analytics and predicting future behaviors or outcomes based on past actions.\n- Personalizing marketing strategies by analyzing individual customer information."
+      },
+      {
+        "q": "What is the importance of SQL databases in data science?",
+        "a": "SQL databases are used to store structured data efficiently."
+      },
+      {
+        "q": "What is the first domain for people starting a career in data science?",
+        "a": "Fraud and Risk Detection"
+      },
+      {
+        "q": "What is the second domain for people starting a career in data science?",
+        "a": "Healthcare"
+      },
+      {
+        "q": "What is the third domain for people starting a career in data science?",
+        "a": "Internet Search"
+      },
+      {
+        "q": "What is the fourth domain for people starting a career in data science?",
+        "a": "Targeted Advertising"
+      },
+      {
+        "q": "What is the fifth domain for people starting a career in data science?",
+        "a": "Road Travel"
+      },
+      {
+        "q": "How does data science integrate various disciplines?",
+        "a": "It integrates techniques from mathematics, statistics, computer science, and domain-specific fields such as business or a particular industry."
+      },
+      {
+        "q": "What is the Venn diagram about?",
+        "a": "The Venn diagram illustrates how different areas like Computer Science, Machine Learning, Maths & Statistics, Data Analysis, Traditional Software, and Business / Domain Expertise overlap in data science."
+      }
+    ]
+  },
+  {
     "timestamp": "2026-06-07 21:54",
     "files": [
       "OS5_6-2.pdf"

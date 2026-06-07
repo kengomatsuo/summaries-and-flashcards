@@ -36,24 +36,18 @@ def append_run(
         "proficiency": proficiency,
         "summary": summary,
         "group_labels": group_labels or [],
-        "flashcards": [],   # accumulates across generations: [{"q","a"}, ...]
-        "used_parts": [],   # summary topic indices already turned into cards
+        "flashcards": [],   # [{"q","a"}, ...] — generated once from the summary
     })
     history = history[:_MAX_RUNS]
     _save(history)
     return run_id
 
 
-def save_flashcards(
-    run_id: str,
-    cards: list[tuple[str, str]],
-    used_parts: list[int],
-) -> None:
-    """Persist a run's full flashcard deck + used topics (best-effort).
+def save_flashcards(run_id: str, cards: list[tuple[str, str]]) -> None:
+    """Persist a run's flashcard deck (best-effort).
 
-    The session is the source of truth for the live deck; this just mirrors it to
-    disk so it survives a revisit. No-ops if the run has no id or has scrolled out
-    of history (e.g. legacy runs created before ids existed).
+    No-ops if the run has no id or has scrolled out of history (e.g. legacy runs
+    created before ids existed).
     """
     if not run_id:
         return
@@ -62,7 +56,6 @@ def save_flashcards(
     if entry is None:
         return
     entry["flashcards"] = [{"q": q, "a": a} for q, a in cards]
-    entry["used_parts"] = sorted(set(int(i) for i in used_parts))
     _save(history)
 
 
