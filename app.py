@@ -1,153 +1,250 @@
+import re
 import streamlit as st
 from summariesandflashcards import ollama_client, ingest
 from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL
-from summariesandflashcards.prompts import DEPTH_OPTIONS, auto_depth, PROFICIENCY_OPTIONS
+from summariesandflashcards.prompts import DEPTH_OPTIONS, PROFICIENCY_OPTIONS
 from summariesandflashcards import summarize
 
-st.set_page_config(page_title="Summaries and Flashcards", page_icon="📄", layout="wide")
-st.title("📄 Summaries and Flashcards")
-st.caption("AI-powered lecture notes summariser — fully local, no internet required.")
+_SUMMARY_HEIGHT = 500
+_SECTIONS_SHOWN = 5
 
-# ── Ollama health check ───────────────────────────────────────────────────────
+
+def _natural_key(name: str) -> list:
+    return [
+        (0, int(p)) if p.isdigit() else (1, p.lower())
+        for p in re.split(r'(\d+)', name)
+    ]
+
+
+st.set_page_config(page_title="Summaries and Flashcards", page_icon="📄", layout="centered")
+
+# ── Health check ──────────────────────────────────────────────────────────────
 if not ollama_client.is_up():
     st.error(
-        "**Ollama is not running.** Start it with:\n\n"
-        "```\nollama serve\n```\n\n"
-        "Then refresh this page."
+        "**Ollama is not running.** Start it with:\n```\nollama serve\n```\nThen refresh."
     )
     st.stop()
 
 models = ollama_client.list_models()
 if not models:
     st.error(
-        "**No models installed.** Pull the default model with:\n\n"
-        f"```\nollama pull {DEFAULT_MODEL}\n```\n\n"
-        "Then refresh this page."
+        f"**No models installed.** Pull one with:\n```\nollama pull {DEFAULT_MODEL}\n```\nThen refresh."
     )
     st.stop()
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.header("Settings")
-    default_idx = models.index(DEFAULT_MODEL) if DEFAULT_MODEL in models else 0
-    selected_model = st.selectbox("Model", models, index=default_idx)
-    st.caption("Ollama server: `localhost:11434` ✅")
+# ── Session state init ────────────────────────────────────────────────────────
+if "stage" not in st.session_state:
+    st.session_state.stage = "idle"
 
-# ── File upload ───────────────────────────────────────────────────────────────
-st.subheader("Upload your notes")
-uploaded_files = st.file_uploader(
-    "Drag and drop files here",
-    type=SUPPORTED_EXTENSIONS,
-    accept_multiple_files=True,
-    help=f"Supported: {', '.join(SUPPORTED_EXTENSIONS)}",
-)
+# ── Header ────────────────────────────────────────────────────────────────────
+st.title("Summaries and Flashcards")
+st.caption("Fully local AI lecture notes summariser — no internet required.")
 
-if not uploaded_files:
-    st.info("Upload one or more files to get started.")
-    st.stop()
+# ══════════════════════════════════════════════════════════════════════════════
+# IDLE — upload + configure
+# ══════════════════════════════════════════════════════════════════════════════
+if st.session_state.stage == "idle":
+    uploaded_files = st.file_uploader(
+        "notes",
+        type=SUPPORTED_EXTENSIONS,
+        accept_multiple_files=True,
+        label_visibility="collapsed",
+    )
 
-# ── Extract text ──────────────────────────────────────────────────────────────
-extracted: dict[str, str] = {}
+    if uploaded_files:
+        st.divider()
+        default_idx = models.index(DEFAULT_MODEL) if DEFAULT_MODEL in models else 0
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            selected_model = st.selectbox("Model", models, index=default_idx)
+        with col2:
+            summary_depth = st.radio("Depth", DEPTH_OPTIONS, index=1)
+        with col3:
+            proficiency = st.radio("Level", PROFICIENCY_OPTIONS, index=1)
 
-for f in uploaded_files:
-    with st.spinner(f"Extracting `{f.name}`…"):
+        if st.button("✨ Summarise", type="primary", use_container_width=True):
+            sorted_files = sorted(uploaded_files, key=lambda f: _natural_key(f.name))
+            st.session_state.file_data = [
+                {"name": f.name, "bytes": f.getvalue()} for f in sorted_files
+            ]
+            st.session_state.selected_model = selected_model
+            st.session_state.summary_depth = summary_depth
+            st.session_state.proficiency = proficiency
+            st.session_state.stage = "running"
+            st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RUNNING — live pipeline view
+# ══════════════════════════════════════════════════════════════════════════════
+elif st.session_state.stage == "running":
+    file_data: list[dict] = st.session_state.file_data
+    model: str = st.session_state.selected_model
+    depth: str = st.session_state.summary_depth
+    proficiency: str = st.session_state.proficiency
+
+    st.markdown("  ".join(f"`{d['name']}`" for d in file_data))
+    progress_bar = st.progress(0.0, text="Starting…")
+
+    # One st.empty() per pipeline step — contents are swapped in/out as steps run
+    files_ph = st.empty()
+    sections_ph = st.empty()
+    groups_ph = st.empty()
+
+    # ── Render helpers ─────────────────────────────────────────────────────────
+    files_acc: list[tuple[str, int]] = []
+    sections_acc: list[tuple[str, str]] = []
+
+    def _render_files(collapsed: bool = False) -> None:
+        n = len(files_acc)
+        label = f"Files — {n} processed" if n else "Files"
+        with files_ph.container():
+            with st.expander(label, expanded=not collapsed):
+                for fname, nsec in files_acc:
+                    noun = "section" if nsec == 1 else "sections"
+                    st.markdown(f"✓ &nbsp;**{fname}** — {nsec} {noun}")
+
+    def _render_sections(collapsed: bool = False) -> None:
+        n = len(sections_acc)
+        label = f"Sections — {n} labelled" if n else "Sections"
+        shown = sections_acc[-_SECTIONS_SHOWN:]
+        n_hidden = n - len(shown)
+        with sections_ph.container():
+            with st.expander(label, expanded=not collapsed):
+                if n_hidden > 0:
+                    st.caption(f"↑ {n_hidden} more above")
+                for title, lbl in shown:
+                    st.markdown(f"✓ &nbsp;**{title}** — {lbl}")
+
+    def _render_groups(groups: list) -> None:
+        n = len(groups)
+        with groups_ph.container():
+            with st.expander(f"Groups — {n} topics", expanded=False):
+                for j, group in enumerate(groups):
+                    titles = " · ".join(t for t, _, _ in group)
+                    st.markdown(f"`{j + 1}` &nbsp;{titles}")
+
+    # ── Callbacks ──────────────────────────────────────────────────────────────
+    def on_progress(msg: str, pct: float) -> None:
+        progress_bar.progress(pct, text=msg)
+
+    def on_step(event: str, data) -> None:
+        if event == "segment":
+            fi, n_files, file_name, n_sections = data
+            files_acc.append((file_name, n_sections))
+            _render_files(collapsed=(fi == n_files - 1))
+        elif event == "section":
+            i, n, title, label = data
+            sections_acc.append((title, label))
+            _render_sections(collapsed=(i == n - 1))
+        elif event == "groups":
+            groups: list = data
+            _render_sections(collapsed=True)
+            _render_groups(groups)
+            # Store group labels for DONE stage tabs
+            st.session_state.group_labels = [
+                (t for t, _, _ in group).__next__()[:40]
+                for group in groups
+            ]
+
+    # ── Extract ────────────────────────────────────────────────────────────────
+    extracted: dict[str, str] = {}
+    n_files = len(file_data)
+    for i, d in enumerate(file_data):
+        progress_bar.progress((i / n_files) * 0.05, text=f"Extracting {d['name']}…")
         try:
-            text = ingest.extract_text(f.name, f.getvalue())
-            extracted[f.name] = text
-        except Exception as exc:
-            st.warning(f"Could not extract **{f.name}**: {exc}")
-
-if not extracted:
-    st.stop()
-
-# ── Text preview ──────────────────────────────────────────────────────────────
-st.subheader("Extracted text preview")
-for name, text in extracted.items():
-    word_count = len(text.split())
-    with st.expander(f"**{name}** — {word_count:,} words", expanded=False):
-        st.text_area(
-            label=name,
-            value=text[:4000] + ("…" if len(text) > 4000 else ""),
-            height=300,
-            disabled=True,
-            label_visibility="collapsed",
-        )
-
-st.divider()
-
-# ── Summarise ─────────────────────────────────────────────────────────────────
-st.subheader("Summary")
-
-# Combine all extracted files into one body of text.
-# Files are labelled with their position so the model understands course ordering.
-total_files = len(extracted)
-combined_text = "\n\n---\n\n".join(
-    f"# File {i} of {total_files}: {name}\n\n{text}"
-    for i, (name, text) in enumerate(extracted.items(), 1)
-)
-
-# Auto-detect depth from total word count; let user override in sidebar
-total_words = len(combined_text.split())
-detected_depth = auto_depth(total_words)
-
-with st.sidebar:
-    st.divider()
-    summary_depth = st.radio(
-        "Summary depth",
-        DEPTH_OPTIONS,
-        index=DEPTH_OPTIONS.index(detected_depth),
-        help="Auto-selected based on document length. Change if you prefer a different style.",
-    )
-    st.caption(f"Auto-detected from {total_words:,} words")
-
-    st.divider()
-    proficiency = st.radio(
-        "Your level in this subject",
-        PROFICIENCY_OPTIONS,
-        index=PROFICIENCY_OPTIONS.index("Intermediate"),
-        help=(
-            "Beginner: terms are defined and re-explained throughout. "
-            "Intermediate: advanced terms defined once. "
-            "Expert: full technical language, no definitions."
-        ),
-    )
-
-use_mapreduce = summarize.needs_mapreduce(combined_text)
-if use_mapreduce:
-    chunks = summarize.chunk_text(combined_text)
-    st.info(
-        f"Document has **{len(chunks)} sections** — each will be summarised independently "
-        "then merged for better accuracy."
-    )
-
-if st.button("✨ Summarise", type="primary", use_container_width=True):
-    try:
-        if use_mapreduce:
-            progress_bar = st.progress(0.0, text="Starting…")
-
-            def on_progress(msg: str, pct: float) -> None:
-                progress_bar.progress(pct, text=msg)
-
-            summary = st.write_stream(
-                summarize.summarize_mapreduce(combined_text, selected_model, summary_depth, proficiency, on_progress)
+            extracted[f"File {i + 1} of {n_files}: {d['name']}"] = (
+                ingest.extract_text(d["name"], d["bytes"])
             )
-            progress_bar.empty()
-        else:
-            with st.spinner(f"Summarising with **{selected_model}**…"):
-                summary = st.write_stream(
-                    summarize.summarize_stream(combined_text, selected_model, summary_depth, proficiency)
-                )
-        st.session_state["last_summary"] = summary
-    except Exception as exc:
-        st.error(f"Summarisation failed: {exc}")
+        except Exception as exc:
+            st.warning(f"Could not extract **{d['name']}**: {exc}")
 
-elif "last_summary" in st.session_state:
-    st.markdown(st.session_state["last_summary"])
+    if not extracted:
+        st.error("No text could be extracted from the uploaded files.")
+        if st.button("↩ Start over"):
+            st.session_state.stage = "idle"
+            st.rerun()
+        st.stop()
 
-if "last_summary" in st.session_state:
-    st.download_button(
-        label="⬇ Download summary (.txt)",
-        data=st.session_state["last_summary"],
-        file_name="summary.txt",
-        mime="text/plain",
+    combined = "\n\n---\n\n".join(
+        f"# {name}\n\n{text}" for name, text in extracted.items()
     )
+
+    # ── Run pipeline + stream into fixed-height container ─────────────────────
+    stream = summarize.summarize_mapreduce(
+        combined, model, depth, proficiency,
+        on_progress=on_progress,
+        on_step=on_step,
+    )
+
+    st.markdown("**Summary**")
+    with st.container(height=_SUMMARY_HEIGHT, border=True):
+        result = st.write_stream(stream)
+
+    summary: str = result if isinstance(result, str) else "".join(result)
+    progress_bar.empty()
+    st.session_state.last_summary = summary
+    st.session_state.stage = "done"
+    st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DONE — results
+# ══════════════════════════════════════════════════════════════════════════════
+elif st.session_state.stage == "done":
+    file_data = st.session_state.file_data
+    summary: str = st.session_state.last_summary
+    group_labels: list[str] = st.session_state.get("group_labels", [])
+
+    col_files, col_reset = st.columns([6, 1])
+    with col_files:
+        st.markdown("  ".join(f"`{d['name']}`" for d in file_data))
+    with col_reset:
+        if st.button("↩", help="Start over"):
+            for key in [
+                "stage", "file_data", "last_summary",
+                "selected_model", "summary_depth", "proficiency", "group_labels",
+            ]:
+                st.session_state.pop(key, None)
+            st.rerun()
+
+    st.divider()
+
+    # Split by group separators written during Phase 3
+    parts = [p.strip() for p in summary.split("\n\n---\n\n") if p.strip()]
+
+    if len(parts) > 1:
+        # Label tabs: use stored first-section title, fall back to "Part N"
+        tab_names = []
+        for i in range(len(parts)):
+            if i < len(group_labels) and group_labels[i]:
+                tab_names.append(group_labels[i])
+            else:
+                tab_names.append(f"Part {i + 1}")
+
+        tabs = st.tabs(tab_names)
+        for tab, part in zip(tabs, parts):
+            with tab:
+                with st.container(height=_SUMMARY_HEIGHT, border=False):
+                    st.markdown(part)
+    else:
+        with st.container(height=_SUMMARY_HEIGHT, border=False):
+            st.markdown(summary)
+
+    st.divider()
+
+    dl1, dl2 = st.columns(2)
+    with dl1:
+        st.download_button(
+            "⬇ Download (.md)",
+            data=summary,
+            file_name="summary.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+    with dl2:
+        st.download_button(
+            "⬇ Download (.txt)",
+            data=summary,
+            file_name="summary.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )

@@ -1,3 +1,5 @@
 .venv/
 .DS_Store
 **/.DS_Store
+logs/
+debug_*.txt
