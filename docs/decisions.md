@@ -90,3 +90,21 @@ Removing the height wrapper during the RUNNING stage lets the page scroll natura
 **Why prompting alone is insufficient:** The write prompt and vision prompt both instruct the model to use `$...$` and `$$...$$`. At 3B scale, models reliably output `\(...\)` and `\[...\]` (standard LaTeX document convention) regardless. Compliance with delimiter format instructions is too inconsistent to rely on.
 
 **The fix:** Two regexes applied after `st.write_stream()` completes, before the summary is stored in session state. The streaming display shows raw delimiters; the DONE-stage tabs show rendered math. This is acceptable — users see the rendered version when reading the final result.
+
+---
+
+## Thin slides are gated in code, not by prompt (anti-hallucination)
+
+**The problem:** A small model (e.g. `qwen2.5vl:3b`) given a near-empty slide and a "be comprehensive" instruction does not stay silent — it fills the void from parametric memory. Observed on a real deck: a slide whose only text was `Result` produced a full sorting-algorithms lecture; `Get target picture` + a Mona Lisa caption produced an image-processing lecture; title slides produced fabricated `ROC/AUC/Naive Bayes/SVM` content. The write prompt *told* the model to skip such slides, but at 3B scale the prohibition loses to the prior to be helpful and complete.
+
+**Why prompting alone is insufficient:** negative instructions ("do not add facts not in the notes", "write nothing for title slides") are unreliable on small models. Proof: every group opened with the exact phrase the prompt forbade (`"The lecture covered…"`).
+
+**The fix:** prevent rather than instruct.
+- **Gate A** (`summarize.py`, between Group and Write): drop any group with fewer than `MIN_GROUP_WORDS` *teachable* words — counted per section after stripping the file header, trailing `[Image: …]` captions, and `STEP n OF m` labels. The model is never asked to summarise an empty slide, so it cannot invent one.
+- **Gate B** (in Write): strip the narration opener deterministically and honour a `SKIP` sentinel as a backstop for borderline groups that pass Gate A.
+
+**Caption strip caveat:** image captions are matched from `[Image:` to **end of section**, not to the first `]`, because a caption can itself contain `]` (e.g. an array index `System[n]`). This is safe because `ingest.py` always *appends* captions after a section's text.
+
+**Tradeoff:** image-only / pipeline-diagram decks (e.g. a deepfake "source → analyze → warp → result" sequence carried entirely by pictures) have no teachable *text* and are dropped wholesale. This is faithful — there is nothing in the notes to summarise — but a future "describe visual slides" mode could surface that content explicitly rather than silently.
+
+**Calibration:** title slides in the test corpus run ~8–9 teachable words; pipeline-step labels (`Result`) run 1–3; the thinnest real content slide ran 22. `MIN_GROUP_WORDS = 12` sits in the gap. It is a config knob — raise to drop more aggressively, lower to keep terser slides (at the risk of a one-line definition slide like `F = ma` being dropped).

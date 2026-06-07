@@ -98,9 +98,13 @@ For each consecutive pair of labels, one LLM call (`adjacency_prompt()`) returns
 - `no` → start a new group
 - Hard cap: `GROUP_SIZE = 15` sections per group prevents over-merging when a topic dominates many consecutive slides
 
+**Gate A — thin-group drop (anti-hallucination).** After grouping, any group whose *teachable* word count is below `MIN_GROUP_WORDS` (config, default 12) is dropped before the writer ever sees it. Teachable words are counted per section after stripping the file header, the trailing `[Image: …]` caption(s), and `STEP n OF m` labels — so a bare title slide, a one-word pipeline label (`Result`), or a picture-only slide reads as near-empty. The writer is never asked to summarise such a group, because a small model handed an empty slide invents a full lecture (`Result` → a sorting-algorithms lecture; a Mona Lisa caption → an image-processing lecture). If every group is thin, all are kept (never produce an empty summary). The filtered list is what Phase 3, the logs, and the UI group view all see, so tab labels stay aligned.
+
 ### Phase 3 — Write (65 → 100%)
 
 One **streaming** LLM call per group. The raw text of all sections in the group is sent with `summary_prompt(depth, proficiency)`. Tokens are yielded directly to the UI.
+
+**Gate B — opener strip + SKIP sentinel.** The lead of each group's output is buffered just long enough (first newline or 100 chars) to (a) strip the model's habitual `"The lecture covered…"` / `"This slide discusses…"` narration prefix — only the lead phrase, so the topic noun that follows survives — and (b) honour a `SKIP` sentinel: the write prompt instructs the model to reply `SKIP` for a section with no teachable content, and such groups emit nothing. After the lead is decided the rest streams live. A `\n\n---\n\n` separator is emitted only *between groups that actually wrote*, so dropped/SKIP groups leave no empty parts. The final labels of written groups are sent to the UI via the `written_labels` step event to keep tabs aligned.
 
 Groups are separated in the output stream by `\n\n---\n\n`. The DONE stage splits on this delimiter to populate tabs.
 

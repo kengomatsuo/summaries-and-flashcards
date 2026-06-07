@@ -12,6 +12,7 @@ import os
 import re
 import tempfile
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import pymupdf
@@ -90,7 +91,12 @@ def _noise_ratio(text: str) -> float:
 
 # ── PDF via PyMuPDF ───────────────────────────────────────────────────────────
 
-def _extract_pdf(file_bytes: bytes, vision_model: str = "", client: "Client | None" = None) -> str:
+def _extract_pdf(
+    file_bytes: bytes,
+    vision_model: str = "",
+    client: "Client | None" = None,
+    on_page: "Callable[[int, int], None] | None" = None,
+) -> str:
     """Extract text from a PDF, with optional vision fallback per page.
 
     Strategy per page:
@@ -103,11 +109,14 @@ def _extract_pdf(file_bytes: bytes, vision_model: str = "", client: "Client | No
 
     Pages are joined with form-feed (\\x0c) so the existing segmentation
     pipeline handles them identically to form-feed-bearing PDFs.
+
+    on_page(page_idx, total_pages) is called after each page completes.
     """
     doc = pymupdf.open(stream=file_bytes, filetype="pdf")
     pages: list[str] = []
+    total = len(doc)
 
-    for page in doc:
+    for page_idx, page in enumerate(doc):
         text = _clean(page.get_text())
         has_images = len(page.get_images()) > 0
         text_ok = bool(_MEANINGFUL_RE.search(text))
@@ -130,9 +139,13 @@ def _extract_pdf(file_bytes: bytes, vision_model: str = "", client: "Client | No
             content = text
         else:
             # No vision model and no meaningful text — skip (garbage page)
+            if on_page:
+                on_page(page_idx, total)
             continue
 
         pages.append(content)
+        if on_page:
+            on_page(page_idx, total)
 
     doc.close()
     return "\x0c".join(pages)
@@ -140,7 +153,12 @@ def _extract_pdf(file_bytes: bytes, vision_model: str = "", client: "Client | No
 
 # ── PPTX via python-pptx ──────────────────────────────────────────────────────
 
-def _extract_pptx(file_bytes: bytes, vision_model: str = "", client: "Client | None" = None) -> str:
+def _extract_pptx(
+    file_bytes: bytes,
+    vision_model: str = "",
+    client: "Client | None" = None,
+    on_page: "Callable[[int, int], None] | None" = None,
+) -> str:
     """Extract text and images from a PPTX file.
 
     Per slide: extract all text shapes and table cells.  If the slide contains
@@ -148,11 +166,15 @@ def _extract_pptx(file_bytes: bytes, vision_model: str = "", client: "Client | N
     append the description inline.
 
     Slides are joined with form-feed (\\x0c).
+
+    on_page(slide_idx, total_slides) is called after each slide completes.
     """
     prs = Presentation(io.BytesIO(file_bytes))
+    slide_list = list(prs.slides)
     slides: list[str] = []
+    total = len(slide_list)
 
-    for slide in prs.slides:
+    for slide_idx, slide in enumerate(slide_list):
         text_parts: list[str] = []
         image_descriptions: list[str] = []
 
@@ -184,6 +206,8 @@ def _extract_pptx(file_bytes: bytes, vision_model: str = "", client: "Client | N
         content = "\n".join(slide_parts).strip()
         if content:
             slides.append(content)
+        if on_page:
+            on_page(slide_idx, total)
 
     return "\x0c".join(slides)
 
@@ -222,6 +246,7 @@ def extract_text(
     file_bytes: bytes,
     vision_model: str = "",
     client: "Client | None" = None,
+    on_page: "Callable[[int, int], None] | None" = None,
 ) -> str:
     """Extract text (and optional vision descriptions) from an uploaded file.
 
@@ -231,13 +256,15 @@ def extract_text(
         vision_model: Ollama model name to use for image description.
                       Empty string disables vision.
         client:       Ollama Client instance.  Required when vision_model is set.
+        on_page:      Optional callback(page_idx, total_pages) called after each
+                      page/slide completes. Used for progress reporting.
     """
     ext = os.path.splitext(file_name)[1].lower()
 
     if ext == ".pdf":
-        return _extract_pdf(file_bytes, vision_model, client)
+        return _extract_pdf(file_bytes, vision_model, client, on_page)
     if ext in (".pptx", ".ppt"):
-        return _extract_pptx(file_bytes, vision_model, client)
+        return _extract_pptx(file_bytes, vision_model, client, on_page)
     if ext in _IMAGE_EXTENSIONS:
         return _extract_image(file_bytes, vision_model, client)
 

@@ -62,12 +62,13 @@ class RunLogger:
 
     # ── Phase 1: skim ─────────────────────────────────────────────────────────
 
-    def log_skim(self, i: int, title: str, label: str, raw: str) -> None:
-        """One call per section after LLM label."""
+    def log_skim(self, i: int, title: str, label: str, context: str, raw: str) -> None:
+        """One call per section after LLM skim."""
         block = (
             f"--- Section {i + 1} ---\n"
             f"Title  : {title}\n"
             f"Label  : {label}\n"
+            f"Context: {context}\n"
             f"Raw    :\n{raw}\n"
             f"{'-'*50}\n\n"
         )
@@ -75,16 +76,18 @@ class RunLogger:
 
     # ── Phase 2: groups ───────────────────────────────────────────────────────
 
-    def log_groups(self, groups: list[list[tuple[str, str, str]]]) -> None:
+    def log_groups(self, groups: list[list[tuple[str, str, str, str]]]) -> None:
         """Called once after grouping completes."""
         lines = [f"{len(groups)} groups total\n\n"]
         for i, group in enumerate(groups):
-            titles = " | ".join(t for t, _, _ in group)
-            labels = " | ".join(lab for _, lab, _ in group)
+            titles = " | ".join(t for t, _, _, _ in group)
+            labels = " | ".join(lab for _, lab, _, _ in group)
+            contexts = " | ".join(ctx for _, _, ctx, _ in group)
             lines.append(
                 f"Group {i + 1} ({len(group)} sections)\n"
-                f"  Titles : {titles}\n"
-                f"  Labels : {labels}\n\n"
+                f"  Titles  : {titles}\n"
+                f"  Labels  : {labels}\n"
+                f"  Contexts: {contexts}\n\n"
             )
         self._write("03_groups.txt", "".join(lines))
 
@@ -94,7 +97,7 @@ class RunLogger:
     def open_group_write(
         self,
         group_idx: int,
-        group: list[tuple[str, str, str]],
+        group: list[tuple[str, str, str, str]],
         raw_text: str,
     ) -> "Generator[None, None, None]":
         """Context manager that keeps a log file open during LLM streaming.
@@ -109,8 +112,8 @@ class RunLogger:
                         yield token
         """
         fname = f"04_write_group_{group_idx + 1:02d}.txt"
-        titles = " | ".join(t for t, _, _ in group)
-        labels = " | ".join(lab for _, lab, _ in group)
+        titles = " | ".join(t for t, _, _, _ in group)
+        labels = " | ".join(lab for _, lab, _, _ in group)
         header = (
             f"{'='*70}\n"
             f"Group {group_idx + 1} ({len(group)} sections)\n"

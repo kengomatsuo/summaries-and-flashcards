@@ -3,9 +3,9 @@ PROFICIENCY_OPTIONS = ["Beginner", "Intermediate", "Expert"]
 PROFICIENCY_INSTRUCTIONS = {
     "Beginner": (
         "Write for a reader who is new to this subject. "
-        "Define every technical term the first time it appears, and briefly re-state its meaning each time it recurs. "
-        "Assume the reader only knows concepts one level below this course. "
-        "Use plain language and everyday analogies wherever possible."
+        "The first time a technical term from the notes appears, define it briefly using only what the notes support. "
+        "Prefer plain language. "
+        "Do not invent analogies or examples that are not grounded in the notes."
     ),
     "Intermediate": (
         "Assume the reader has standard course prerequisites. "
@@ -18,17 +18,28 @@ PROFICIENCY_INSTRUCTIONS = {
 }
 
 _PREAMBLE = (
-    "You are a lecture summariser. Your ONLY job is to summarise the theory and concepts taught.\n\n"
-    "STRICT RULES:\n"
-    "1. ONLY include information explicitly present in the provided notes. Do NOT add background knowledge.\n"
-    "2. Cover ALL topics — do not skip any section.\n"
-    "3. If files are labelled 'File 1 of N', 'File 2 of N', etc., treat them in that order — earlier files introduce concepts later files build on.\n"
-    "4. Write about the theory: concepts, definitions, algorithms, methods.\n"
-    "5. When a section contains exercises or practice problems, discuss what they are practising and reference the relevant theory or formula. Do NOT solve them or show step-by-step calculations.\n"
-    "6. NEVER write 'Final answer', worked calculations, or step-by-step solutions.\n"
-    "7. Output the summary directly — no preamble like 'I will...' or 'Here is...'.\n"
-    "8. Skip garbled or unreadable text fragments.\n"
-    "9. Write mathematical expressions using $...$ for inline math and $$...$$ (on its own line) for display equations. Example: the speed of sound is $c = \\sqrt{\\gamma P / \\rho}$.\n"
+    "You summarise lecture notes. You may use ONLY facts that appear in the NOTES below.\n\n"
+    "MOST IMPORTANT RULE: if a fact is not written in the notes, do not write it. "
+    "Do not add definitions, background, examples, formulas, history, or related topics from "
+    "your own knowledge — even if they are true and relevant. A short summary that stays "
+    "faithful to the notes is correct; a longer one that adds outside facts is wrong.\n\n"
+    "If the notes below contain no teachable content — only a slide title, a section heading, a "
+    "pipeline or step label (e.g. 'Result', 'Get target picture', 'Step 3'), course metadata, "
+    "or only an image caption — then reply with exactly one word and nothing else: SKIP\n\n"
+    "HOW TO WRITE:\n"
+    "- Start directly with the first real concept. Do NOT begin with 'The lecture covered', "
+    "'This slide', 'This section', 'In this section', 'Here', or 'I will'.\n"
+    "- A line beginning with '[Image:' is a caption describing a picture on the slide, not "
+    "lecture theory. Refer to it only if the slide's own text discusses it; never expand a "
+    "caption into its own topic.\n"
+    "- For an exercise or practice problem: state the question exactly as written, then name "
+    "which concept or formula from the notes applies and why. NEVER solve it, show worked "
+    "calculations, or write 'Final answer'.\n"
+    "- Skip garbled or unreadable fragments.\n"
+    "- Write mathematics using $...$ for inline and $$...$$ (on its own line) for display "
+    "equations. Example: the speed of sound is $c = \\sqrt{\\gamma P / \\rho}$.\n"
+    "- Match length to the notes: one line of source becomes at most one sentence. Never pad.\n\n"
+    "Before each sentence, check: is this fact in the notes above? If not, leave it out."
 )
 
 DEPTH_INSTRUCTIONS = {
@@ -42,10 +53,10 @@ DEPTH_INSTRUCTIONS = {
         "Let the content determine the length — do not pad or truncate artificially."
     ),
     "In-depth": (
-        "Write a comprehensive, well-structured summary covering all concepts, definitions, "
-        "methods, and how they relate to each other. "
-        "Organise with headings or paragraphs as appropriate. "
-        "Let the content determine the length — capture everything a student would need to know."
+        "Explain each concept, definition, and method THAT APPEARS IN THE NOTES in full, and "
+        "how they relate to each other. Organise with headings or paragraphs as appropriate. "
+        "Depth must come from explaining what is present in the notes — never from adding "
+        "material the notes do not contain. The notes determine the length."
     ),
 }
 
@@ -79,24 +90,28 @@ def vision_prompt(existing_text: str = "") -> str:
     return base
 
 
-def label_prompt(chunk: str) -> str:
-    """Cheap skim: 5-word topic label only — no summary, no explanation."""
+def skim_prompt(chunk: str) -> str:
+    """Skim a section: produce a short topic label and a 1-2 sentence context description."""
     return (
-        "What is the main topic of this section? "
-        "Reply in 5 words or fewer. No sentences — just the topic name.\n"
-        "Use terms exactly as they appear in the text. Do not expand abbreviations.\n\n"
+        "Analyse this lecture section. Use only words and facts that appear in it.\n\n"
         "---\n\n"
         + chunk
-        + "\n\n---\n\nTopic:"
+        + "\n\n---\n\n"
+        "Reply in this exact format (two lines only):\n"
+        "TOPIC: <topic in 5 words or fewer, using terms exactly as they appear. If the section "
+        "has no teachable content — only a title, heading, step label, metadata, or image "
+        "caption — write exactly: (none)>\n"
+        "CONTEXT: <1 sentence describing the concepts, equations, or methods actually present. "
+        "If there is no teachable content, write exactly: none>"
     )
 
 
-def adjacency_prompt(label_a: str, label_b: str) -> str:
-    """Decide if two consecutive topic labels belong to the same group."""
+def adjacency_prompt(context_a: str, context_b: str) -> str:
+    """Decide if two consecutive sections belong to the same topic group."""
     return (
-        f"Topic A: {label_a}\n"
-        f"Topic B: {label_b}\n\n"
-        "Are these the same topic or a direct continuation? Answer only 'yes' or 'no'."
+        f"Section A covers: {context_a}\n"
+        f"Section B covers: {context_b}\n\n"
+        "Answer 'yes' if: these sections cover the same topic, Section B is a direct continuation or next step of Section A, or Section A appears to be a title or heading that introduces Section B. Otherwise answer 'no'. Answer only 'yes' or 'no'."
     )
 
 

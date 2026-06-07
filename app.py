@@ -2,10 +2,11 @@ import re
 import streamlit as st
 from ollama import Client
 from summariesandflashcards import ollama_client, ingest
-from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, OLLAMA_HOST
+from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, TEXT_MODEL, OLLAMA_HOST
 from summariesandflashcards.prompts import DEPTH_OPTIONS, PROFICIENCY_OPTIONS
 from summariesandflashcards import summarize
 from summariesandflashcards.ollama_client import is_vision_model
+from summariesandflashcards.history import append_run, load_history
 
 _SUMMARY_HEIGHT = 500
 _SECTIONS_SHOWN = 5
@@ -15,7 +16,7 @@ _INLINE_MATH_RE = re.compile(r'\\\((.*?)\\\)', re.DOTALL)
 
 
 def _fix_latex(text: str) -> str:
-    """Convert \[...\] and \(...\) to $$...$$ and $...$ for Streamlit KaTeX."""
+    r"""Convert \[...\] and \(...\) to $$...$$ and $...$ for Streamlit KaTeX."""
     text = _DISPLAY_MATH_RE.sub(lambda m: f'\n$$\n{m.group(1).strip()}\n$$\n', text)
     text = _INLINE_MATH_RE.sub(lambda m: f'${m.group(1)}$', text)
     return text
@@ -91,6 +92,25 @@ if st.session_state.stage == "idle":
             st.session_state.stage = "running"
             st.rerun()
 
+    runs = load_history()
+    if runs:
+        st.divider()
+        st.caption("Recent runs")
+        for i, run in enumerate(runs):
+            file_label = ", ".join(run["files"])
+            with st.expander(f"{run['timestamp']} — {file_label}"):
+                st.caption(
+                    f"Model: {run['model']} · Depth: {run['depth']} · Level: {run['proficiency']}"
+                )
+                if st.button("View summary", key=f"load_run_{i}"):
+                    st.session_state.last_summary = run["summary"]
+                    st.session_state.file_data = [
+                        {"name": f, "bytes": b""} for f in run["files"]
+                    ]
+                    st.session_state.group_labels = run.get("group_labels", [])
+                    st.session_state.stage = "done"
+                    st.rerun()
+
 # ══════════════════════════════════════════════════════════════════════════════
 # RUNNING — live pipeline view
 # ══════════════════════════════════════════════════════════════════════════════
@@ -138,7 +158,7 @@ elif st.session_state.stage == "running":
         with groups_ph.container():
             with st.expander(f"Groups — {n} topics", expanded=False):
                 for j, group in enumerate(groups):
-                    titles = " · ".join(t for t, _, _ in group)
+                    titles = " · ".join(t for t, _, _, _ in group)
                     st.markdown(f"`{j + 1}` &nbsp;{titles}")
 
     # ── Callbacks ──────────────────────────────────────────────────────────────
@@ -160,23 +180,44 @@ elif st.session_state.stage == "running":
             _render_groups(groups)
             # Store group labels for DONE stage tabs
             st.session_state.group_labels = [
-                (t for t, _, _ in group).__next__()[:40]
+                (t for t, _, _, _ in group).__next__()[:40]
                 for group in groups
             ]
+        elif event == "written_labels":
+            # Final labels for only the groups that actually produced content
+            # (some are dropped by the SKIP gate during writing).
+            st.session_state.group_labels = data
 
     # ── Extract ────────────────────────────────────────────────────────────────
     extracted: dict[str, str] = {}
     n_files = len(file_data)
     vision_enabled = is_vision_model(model)
     vision_client = Client(host=OLLAMA_HOST) if vision_enabled else None
+
+    # Route the text phases to a text-only model when the selected model is a VL
+    # model and the text model is installed; otherwise reuse the selected model.
+    text_model = TEXT_MODEL if (vision_enabled and TEXT_MODEL in models) else model
+    if text_model != model:
+        st.caption(f"Vision: `{model}` · Text: `{text_model}`")
     for i, d in enumerate(file_data):
-        progress_bar.progress((i / n_files) * 0.05, text=f"Extracting {d['name']}…")
+        file_base = i / n_files * 0.05
+        file_range = 1 / n_files * 0.05
+        progress_bar.progress(file_base, text=f"Extracting {d['name']}…")
+
+        def _on_page(page_idx: int, total: int, _d=d, _fb=file_base, _fr=file_range) -> None:
+            pct = _fb + _fr * (page_idx + 1) / total
+            progress_bar.progress(
+                min(pct, _fb + _fr),
+                text=f"Extracting page {page_idx + 1} of {total} from {_d['name']}…",
+            )
+
         try:
             extracted[f"File {i + 1} of {n_files}: {d['name']}"] = (
                 ingest.extract_text(
                     d["name"], d["bytes"],
                     vision_model=model if vision_enabled else "",
                     client=vision_client,
+                    on_page=_on_page,
                 )
             )
         except Exception as exc:
@@ -193,20 +234,40 @@ elif st.session_state.stage == "running":
         f"# {name}\n\n{text}" for name, text in extracted.items()
     )
 
+    # Free the vision model before the text phases load a second model — keeps
+    # peak RAM at ~max(vision, text) instead of the sum (matters on low RAM).
+    if vision_client and text_model != model:
+        try:
+            vision_client.chat(model=model, messages=[], keep_alive=0)
+        except Exception:
+            pass
+
     # ── Run pipeline + stream into fixed-height container ─────────────────────
     stream = summarize.summarize_mapreduce(
-        combined, model, depth, proficiency,
+        combined, text_model, depth, proficiency,
         on_progress=on_progress,
         on_step=on_step,
     )
 
     st.markdown("**Summary**")
-    result = st.write_stream(stream)
+    with st.container(height=_SUMMARY_HEIGHT, border=True, autoscroll=True):
+        result = st.write_stream(stream)
 
     summary: str = result if isinstance(result, str) else "".join(result)
     summary = _fix_latex(summary)
     progress_bar.empty()
     st.session_state.last_summary = summary
+    try:
+        append_run(
+            files=[d["name"] for d in file_data],
+            model=model,
+            depth=depth,
+            proficiency=proficiency,
+            summary=summary,
+            group_labels=st.session_state.get("group_labels", []),
+        )
+    except Exception:
+        pass
     st.session_state.stage = "done"
     st.rerun()
 
@@ -236,7 +297,7 @@ elif st.session_state.stage == "done":
     parts = [p.strip() for p in summary.split("\n\n---\n\n") if p.strip()]
 
     if len(parts) > 1:
-        # Label tabs: use stored first-section title, fall back to "Part N"
+        # Label tabs/options: use stored first-section title, fall back to "Part N"
         tab_names = []
         for i in range(len(parts)):
             if i < len(group_labels) and group_labels[i]:
@@ -244,11 +305,20 @@ elif st.session_state.stage == "done":
             else:
                 tab_names.append(f"Part {i + 1}")
 
-        tabs = st.tabs(tab_names)
-        for tab, part in zip(tabs, parts):
-            with tab:
-                with st.container(height=_SUMMARY_HEIGHT, border=False):
-                    st.markdown(part)
+        if len(parts) <= 10:
+            tabs = st.tabs(tab_names)
+            for tab, part in zip(tabs, parts):
+                with tab:
+                    with st.container(height=_SUMMARY_HEIGHT, border=False):
+                        st.markdown(part)
+        else:
+            selected_idx = st.selectbox(
+                "Topic",
+                range(len(tab_names)),
+                format_func=lambda i: f"{i + 1}. {tab_names[i]}",
+            )
+            with st.container(height=_SUMMARY_HEIGHT, border=False):
+                st.markdown(parts[selected_idx])
     else:
         with st.container(height=_SUMMARY_HEIGHT, border=False):
             st.markdown(summary)

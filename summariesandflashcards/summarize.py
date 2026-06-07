@@ -3,9 +3,9 @@ import time
 from collections.abc import Iterator, Callable
 from typing import Any
 from ollama import Client
-from summariesandflashcards.config import OLLAMA_HOST, GROUP_SIZE
+from summariesandflashcards.config import OLLAMA_HOST, GROUP_SIZE, MIN_GROUP_WORDS
 from summariesandflashcards.prompts import (
-    label_prompt, adjacency_prompt, summary_prompt,
+    skim_prompt, adjacency_prompt, summary_prompt,
     auto_depth, DEPTH_OPTIONS, PROFICIENCY_OPTIONS,
 )
 from summariesandflashcards.debug_log import RunLogger, new_run_dir
@@ -52,6 +52,32 @@ def _parse_yes_no(text: str) -> bool:
     raise ValueError(f"Unclear response: {text!r}")
 
 
+# ── Skim output parser ────────────────────────────────────────────────────────
+
+def _parse_skim(raw: str) -> tuple[str, str]:
+    """Extract (label, context) from a skim_prompt response.
+
+    Expects:
+        TOPIC: <short label>
+        CONTEXT: <1-2 sentences>
+
+    Falls back gracefully if the model doesn't follow the format exactly.
+    """
+    label = ""
+    context = ""
+    for line in raw.splitlines():
+        s = line.strip()
+        if not label and s.upper().startswith("TOPIC:"):
+            label = s[6:].strip()[:80]
+        elif not context and s.upper().startswith("CONTEXT:"):
+            context = s[8:].strip()
+    if not label:
+        label = raw.strip()[:80]
+    if not context:
+        context = label
+    return label, context
+
+
 # ── Title extraction ──────────────────────────────────────────────────────────
 
 def _extract_title(chunk: str) -> str:
@@ -70,6 +96,71 @@ def _extract_title(chunk: str) -> str:
 
 _GARBAGE_RE = re.compile(r'^[\|\-\s:=]+$')
 _MEANINGFUL_RE = re.compile(r'[a-zA-Z]{5,}')
+
+# ── Hallucination gates ───────────────────────────────────────────────────────
+# Gate A: count only *teachable* words — strip file headers, image captions, and
+# "STEP n OF m" labels — so a bare title/label/picture slide reads as near-empty.
+_FILE_HEADER_RE = re.compile(r'^#*\s*File \d+ of \d+:.*$', re.MULTILINE)
+# Vision captions are appended AFTER the text of each section by ingest.py, so
+# everything from the first "[Image:" to the end of a section is caption. Matching
+# to end-of-section (not to the first "]") is robust to "]" inside a caption,
+# e.g. an array index like "System[n]".
+_IMAGE_BLOCK_RE = re.compile(r'\[Image:.*', re.DOTALL)
+_STEP_LABEL_RE = re.compile(r'\bSTEP \d+ OF \d+\b', re.IGNORECASE)
+_WORD_RE = re.compile(r'[A-Za-z]{2,}')
+
+# Gate B: strip the model's habitual narration opener (kept short so the topic
+# noun that follows survives, e.g. "The lecture covered image processing" →
+# "Image processing"). Only the lead phrase is removed, never a whole sentence.
+_OPENER_RE = re.compile(
+    r'^\s*(?:'
+    r'the\s+(?:lecture|slides?|section|notes?|text)\s+'
+    r'(?:covered|covers|discussed|discusses|introduced|introduces|explained|explains|'
+    r'described|describes|presented|presents|outlined|outlines|'
+    r'focused\s+on|focuses\s+on|touched\s+on|touches\s+on)\s+'
+    r'|this\s+(?:slide|section|lecture|chapter|part)\s+'
+    r'(?:covered|covers|discussed|discusses|introduced|introduces|explained|explains|'
+    r'described|describes|presented|presents|is\s+about)\s+'
+    r'|in\s+this\s+(?:slide|section|lecture)[,]?\s+'
+    r')',
+    re.IGNORECASE,
+)
+
+
+def _teachable_word_count(section: str) -> int:
+    """Words in ONE section after removing its header, trailing caption, and labels.
+
+    Counted per section because captions trail each section individually — a text
+    section that follows an image section in the same group must still be counted.
+    """
+    section = _FILE_HEADER_RE.sub('', section)
+    section = _IMAGE_BLOCK_RE.sub('', section)
+    section = _STEP_LABEL_RE.sub('', section)
+    return len(_WORD_RE.findall(section))
+
+
+def _group_teachable_words(group: list[tuple[str, str, str, str]]) -> int:
+    return sum(_teachable_word_count(raw) for _, _, _, raw in group)
+
+
+def _group_text(group: list[tuple[str, str, str, str]]) -> str:
+    return "\n\n".join(raw for _, _, _, raw in group)
+
+
+def _strip_opener(text: str) -> str:
+    """Remove a leading 'The lecture covered…'-style narration phrase."""
+    stripped = _OPENER_RE.sub('', text, count=1)
+    if stripped != text:
+        stripped = stripped.lstrip()
+        if stripped:
+            stripped = stripped[0].upper() + stripped[1:]
+    return stripped
+
+
+def _is_skip(text: str) -> bool:
+    """True if the model declined the section (SKIP sentinel) or returned nothing."""
+    t = text.strip().rstrip('.').strip().upper()
+    return t == "" or t == "SKIP"
 
 
 def _split_sections(text: str) -> tuple[list[str], str]:
@@ -108,30 +199,30 @@ def _split_sections(text: str) -> tuple[list[str], str]:
 # ── Topic grouping ────────────────────────────────────────────────────────────
 
 def _topic_group(
-    items: list[tuple[str, str, str]],  # (title, label, raw_chunk)
+    items: list[tuple[str, str, str, str]],  # (title, label, context, raw_chunk)
     client: Client,
     model: str,
     tick: Callable[[str, float], None] | None = None,
     base_pct: float = 0.45,
-) -> list[list[tuple[str, str, str]]]:
-    """Group consecutive items whose labels indicate the same topic.
+) -> list[list[tuple[str, str, str, str]]]:
+    """Group consecutive items whose context descriptions indicate the same topic.
 
-    Adjacency check: label[i-1] vs label[i] → same topic? yes/no.
+    Adjacency check: context[i-1] vs context[i] → same topic? yes/no.
     Falls back to new group on unclear answer. Capped at GROUP_SIZE.
     """
     if len(items) <= 1:
         return [items] if items else []
 
     n = len(items)
-    groups: list[list[tuple[str, str, str]]] = [[items[0]]]
+    groups: list[list[tuple[str, str, str, str]]] = [[items[0]]]
 
     for i in range(1, n):
         if tick:
             tick(f"Categorising section {i + 1} of {n}…", base_pct + (i / n) * 0.2)
 
-        _, label_a, _ = items[i - 1]
-        _, label_b, _ = items[i]
-        prompt = adjacency_prompt(label_a, label_b)
+        _, _, context_a, _ = items[i - 1]
+        _, _, context_b, _ = items[i]
+        prompt = adjacency_prompt(context_a, context_b)
 
         def ask(p=prompt):
             return _parse_yes_no(_collect(client, model, p))
@@ -231,28 +322,43 @@ def summarize_mapreduce(
     n_chunks = len(all_chunks)
 
     # ── Phase 1: Skim  (20 → 45%) ────────────────────────────────────────────
-    items: list[tuple[str, str, str]] = []
+    items: list[tuple[str, str, str, str]] = []
     for i, chunk in enumerate(all_chunks):
         _prog(f"Reading section {i + 1} of {n_chunks}…", 0.2 + (i / n_chunks) * 0.25)
         title = _extract_title(chunk)
-        label = _with_retry(lambda c=chunk: _collect(client, model, label_prompt(c)))
-        label = label.strip()[:80]
-        items.append((title, label, chunk))
-        logger.log_skim(i, title, label, chunk)
+        raw_skim = _with_retry(lambda c=chunk: _collect(client, model, skim_prompt(c)))
+        label, context = _parse_skim(raw_skim)
+        items.append((title, label, context, chunk))
+        logger.log_skim(i, title, label, context, chunk)
         _step("section", (i, n_chunks, title, label))
 
     # ── Phase 2: Group  (45 → 65%) ───────────────────────────────────────────
     _prog("Categorising topics…", 0.45)
     groups = _topic_group(items, client, model, tick=on_progress, base_pct=0.45)
+
+    # Gate A — drop groups with no teachable content BEFORE the writer sees them.
+    # A small model handed a bare title/label/picture slide invents a whole
+    # lecture; the only reliable fix is to never ask it. Fall back to all groups
+    # if everything is thin, so we never produce an empty summary.
+    kept_groups = [g for g in groups if _group_teachable_words(g) >= MIN_GROUP_WORDS]
+    groups = kept_groups or groups
+
     logger.log_groups(groups)
     _step("groups", groups)
 
     # ── Phase 3: Write  (65 → 100%) — stream each group directly ─────────────
+    # Gate B runs here: the lead of each group is buffered just long enough to
+    # (a) strip the "The lecture covered…" narration opener and (b) honour a SKIP
+    # sentinel, then the rest streams live. A separator is emitted only between
+    # groups that actually produce content, so SKIPs leave no empty parts.
     n_groups = len(groups)
     tokens_collected: list[str] = []
+    written_labels: list[str] = []
+    emitted_any = False
+
     for i, group in enumerate(groups):
         _prog(f"Summarising topic {i + 1} of {n_groups}…", 0.65 + (i / n_groups) * 0.35)
-        group_text = "\n\n".join(raw for _, _, raw in group)
+        group_text = _group_text(group)
         prompt = summary_prompt(group_text, depth, proficiency)
         stream = _with_retry(lambda p=prompt: client.chat(
             model=model,
@@ -260,17 +366,50 @@ def summarize_mapreduce(
             options={"num_predict": 2000},
             stream=True,
         ))
+
+        lead = ""          # buffered head of the output, until we decide
+        decided = False    # have we committed to emitting this group?
+        skipped = False    # did the model return SKIP / nothing?
+        pending_sep = "\n\n---\n\n" if emitted_any else ""
+
+        def _commit(text: str):
+            """Emit the cleaned lead, with a separator if earlier groups wrote."""
+            nonlocal emitted_any
+            if pending_sep:
+                tokens_collected.append(pending_sep)
+                yield pending_sep
+            written_labels.append(group[0][0][:40])
+            emitted_any = True
+            tokens_collected.append(text)
+            yield text
+
         with logger.open_group_write(i, group, group_text) as write_token:
             for chunk in stream:
                 token = chunk["message"]["content"]
-                if token:
-                    write_token(token)
+                if not token:
+                    continue
+                write_token(token)
+                if skipped:
+                    continue
+                if decided:
                     tokens_collected.append(token)
                     yield token
+                    continue
+                lead += token
+                if "\n" not in lead and len(lead) < 100:
+                    continue
+                decided = True
+                cleaned = _strip_opener(lead.lstrip())
+                if _is_skip(cleaned):
+                    skipped = True
+                else:
+                    yield from _commit(cleaned)
 
-        if i < n_groups - 1:
-            sep = "\n\n---\n\n"
-            tokens_collected.append(sep)
-            yield sep
+            # Stream ended before the lead buffer tripped the threshold.
+            if not decided and not skipped:
+                cleaned = _strip_opener(lead.lstrip())
+                if not _is_skip(cleaned):
+                    yield from _commit(cleaned)
 
+    _step("written_labels", written_labels)
     logger.log_summary("".join(tokens_collected))
