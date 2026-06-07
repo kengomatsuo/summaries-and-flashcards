@@ -6,9 +6,10 @@ from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, T
 from summariesandflashcards import summarize
 from summariesandflashcards import flashcards
 from summariesandflashcards.ollama_client import is_vision_model
-from summariesandflashcards.history import append_run, load_history
+from summariesandflashcards.history import append_run, save_flashcards, load_history
 
 _SUMMARY_HEIGHT = 500
+_PARTS_PER_GEN = 2  # summary topics consumed per flashcard generation
 _SECTIONS_SHOWN = 5
 
 _DISPLAY_MATH_RE = re.compile(r'\\\[\s*(.*?)\s*\\\]', re.DOTALL)
@@ -100,6 +101,14 @@ if st.session_state.stage == "idle":
                         {"name": f, "bytes": b""} for f in run["files"]
                     ]
                     st.session_state.group_labels = run.get("group_labels", [])
+                    # Restore this run's nested flashcard history + topic state
+                    st.session_state.run_id = run.get("id", "")
+                    fc = run.get("flashcards", [])
+                    st.session_state.flashcards = [(c["q"], c["a"]) for c in fc]
+                    st.session_state.used_parts = run.get("used_parts", [])
+                    st.session_state.flashcards_apkg = (
+                        flashcards.build_apkg(st.session_state.flashcards) if fc else b""
+                    )
                     st.session_state.stage = "done"
                     st.rerun()
 
@@ -249,8 +258,11 @@ elif st.session_state.stage == "running":
     summary = _fix_latex(summary)
     progress_bar.empty()
     st.session_state.last_summary = summary
+    # Fresh run — clear any prior flashcard state so it doesn't bleed across runs.
+    for k in ("flashcards", "flashcards_apkg", "used_parts", "flashcards_note"):
+        st.session_state.pop(k, None)
     try:
-        append_run(
+        st.session_state.run_id = append_run(
             files=[d["name"] for d in file_data],
             model=model,
             depth=depth,
@@ -259,7 +271,7 @@ elif st.session_state.stage == "running":
             group_labels=st.session_state.get("group_labels", []),
         )
     except Exception:
-        pass
+        st.session_state.run_id = ""
     st.session_state.stage = "done"
     st.rerun()
 
@@ -279,7 +291,8 @@ elif st.session_state.stage == "done":
             for key in [
                 "stage", "file_data", "last_summary",
                 "selected_model", "summary_depth", "proficiency", "group_labels",
-                "flashcards", "flashcards_apkg",
+                "flashcards", "flashcards_apkg", "used_parts", "run_id",
+                "flashcards_note",
             ]:
                 st.session_state.pop(key, None)
             st.rerun()
@@ -336,23 +349,58 @@ elif st.session_state.stage == "done":
             use_container_width=True,
         )
 
-    # ── Flashcards (on-demand) ─────────────────────────────────────────────────
+    # ── Flashcards (on-demand, topic-rotated, accumulated) ─────────────────────
+    # The session holds the live deck (source of truth); each generation pulls a
+    # random batch of previously-unused summary topics (temperature 0 → faithful),
+    # merges the new cards in, and mirrors the full deck to the run's history entry.
     st.divider()
     st.markdown("**Flashcards**")
     st.caption("Anki Q&A cards generated from the summary above — grounded in its facts only.")
 
-    if st.button("🃏 Generate flashcards", use_container_width=True):
-        with st.spinner("Generating flashcards…"):
-            cards = flashcards.generate_cards(parts)
-            st.session_state.flashcards = cards
-            st.session_state.flashcards_apkg = flashcards.build_apkg(cards) if cards else b""
+    note = st.session_state.pop("flashcards_note", None)
+    if note:
+        st.caption(note)
 
-    cards = st.session_state.get("flashcards")
-    if cards:
-        st.caption(f"{len(cards)} cards")
-        for i, (q, a) in enumerate(cards, 1):
-            with st.expander(f"{i}.  {q}"):
-                st.markdown(a)
+    n_parts = len(parts)
+    deck: list[tuple] = list(st.session_state.get("flashcards") or [])
+    used = set(st.session_state.get("used_parts") or [])
+    unused = sorted(i for i in range(n_parts) if i not in used)
+
+    if not unused:
+        st.caption(
+            f"All {n_parts} topics covered — {len(deck)} cards."
+            if deck else "No topics with content to turn into cards."
+        )
+    else:
+        label = "🃏 Generate more flashcards" if deck else "🃏 Generate flashcards"
+        if st.button(label, use_container_width=True):
+            import random
+            batch = random.sample(unused, min(_PARTS_PER_GEN, len(unused)))
+            with st.spinner("Generating flashcards…"):
+                new_cards = flashcards.generate_cards([parts[i] for i in batch])
+            seen = {q.strip().lower() for q, _ in deck}
+            added = 0
+            for q, a in new_cards:
+                key = q.strip().lower()
+                if key and key not in seen:
+                    seen.add(key)
+                    deck.append((q, a))
+                    added += 1
+            used.update(batch)  # spent even if dry, so we advance instead of retrying
+            st.session_state.flashcards = deck
+            st.session_state.used_parts = sorted(used)
+            st.session_state.flashcards_apkg = flashcards.build_apkg(deck) if deck else b""
+            save_flashcards(st.session_state.get("run_id", ""), deck, used)
+            st.session_state.flashcards_note = (
+                f"Added {added} card{'s' if added != 1 else ''}."
+                if added else "Those topics had no new cards."
+            )
+            st.rerun()
+
+    if deck:
+        covered = len([i for i in range(n_parts) if i in used])
+        st.caption(f"{len(deck)} cards · {covered}/{n_parts} topics used")
+        st.iframe(flashcards.cards_widget_html(deck), height=420)
         st.download_button(
             "⬇ Download deck (.apkg)",
             data=st.session_state.get("flashcards_apkg", b""),
@@ -361,5 +409,3 @@ elif st.session_state.stage == "done":
             on_click="ignore",
             use_container_width=True,
         )
-    elif cards is not None:
-        st.warning("Couldn't generate flashcards from this summary. Try again.")
