@@ -38,9 +38,7 @@ distributed with Summaries and Flashcards. Users install it independently from h
 | streamlit | 1.58.0 | Apache-2.0 | Snowflake Inc \<hello@streamlit.io\> | https://streamlit.io |
 | markitdown | 0.1.6 | MIT | Adam Fourney, Microsoft | https://github.com/microsoft/markitdown |
 | ollama (Python client) | 0.6.2 | MIT | hello@ollama.com | https://ollama.com |
-| plotly | 6.8.0 | MIT | Chris P, Plotly Inc | https://plotly.com/python/ |
 | genanki | 0.13.1 | MIT | Kerrick Staley | https://github.com/kerrickstaley/genanki |
-| tiktoken | 0.13.0 | MIT | Shantanu Jain, OpenAI | https://github.com/openai/tiktoken |
 
 ---
 

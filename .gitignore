@@ -3,3 +3,7 @@
 **/.DS_Store
 logs/
 debug_*.txt
+.claude/launch.json
+history.json
+__pycache__/
+*.pyc

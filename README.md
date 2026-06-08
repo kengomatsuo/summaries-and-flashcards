@@ -192,9 +192,7 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
 | Streamlit | 1.58.0 | 3.10 | 3.14 |
 | MarkItDown | 0.1.6 | 3.10 | 3.13 |
 | ollama (client) | 0.6.2 | 3.8 | — |
-| Plotly | 6.8.0 | 3.8 | 3.13 |
 | genanki | 0.13.1 | 3.6 | — |
-| tiktoken | 0.13.0 | 3.9 | — |
 
 The combined floor is **Python 3.10**; the combined ceiling is **Python 3.13**.
 Python 3.12 is the recommended version.
