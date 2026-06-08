@@ -282,11 +282,12 @@ class _ProgressView:
                     st.markdown(f"`{j + 1}` &nbsp;{titles}")
 
 
-def _extract(file_data, vision_enabled, vision_client, progress) -> dict[str, str]:
+def _extract(file_data, vision_enabled, vision_client, progress, frac) -> dict[str, str]:
+    """Extract all files, driving the progress bar across 0 → `frac`."""
     extracted: dict[str, str] = {}
     n_files = len(file_data)
     for i, d in enumerate(file_data):
-        base, rng = i / n_files * 0.05, 1 / n_files * 0.05
+        base, rng = i / n_files * frac, 1 / n_files * frac
         progress.progress(base, text=f"Extracting {d['name']}…")
 
         def on_page(idx, total, _d=d, _b=base, _r=rng):
@@ -317,8 +318,12 @@ def render_running(models: list[str]) -> None:
     vision_client = Client(host=OLLAMA_HOST) if vision_enabled else None
     text_model = TEXT_MODEL if (vision_enabled and TEXT_MODEL in models) else DEFAULT_MODEL
 
+    # Split the bar between extraction and summarisation by where the time goes:
+    # vision extraction is slow (give it half), plain text extraction is instant.
+    extract_frac = 0.5 if vision_enabled else 0.15
+
     view = _ProgressView()
-    extracted = _extract(file_data, vision_enabled, vision_client, progress)
+    extracted = _extract(file_data, vision_enabled, vision_client, progress, extract_frac)
     if not extracted:
         delete_run(st.session_state.get("run_id", ""))  # no orphan "running" entry
         st.error("No text could be extracted from the uploaded files.")
@@ -338,7 +343,9 @@ def render_running(models: list[str]) -> None:
 
     stream = summarize.summarize_mapreduce(
         combined, text_model, _DEPTH, _LEVEL,
-        on_progress=lambda msg, pct: progress.progress(pct, text=msg),
+        on_progress=lambda msg, pct: progress.progress(
+            extract_frac + pct * (1 - extract_frac), text=msg
+        ),
         on_step=view.on_step,
     )
     st.markdown("**Summary**")
@@ -424,8 +431,15 @@ def _render_flashcards(parts: list[str]) -> None:
     # Two-phase so the sidebar locks before the (blocking) generation: the click
     # sets a flag and reruns; the rerun disables nav, then this branch generates.
     if st.session_state.get("gen_flashcards"):
-        with st.spinner("Generating flashcards…"):
-            deck = flashcards.generate_cards(parts)
+        prog = st.progress(0.0, text="Generating flashcards…")
+        deck = flashcards.generate_cards(
+            parts,
+            on_progress=lambda done, total: prog.progress(
+                done / total if total else 1.0,
+                text=f"Generating flashcards · topic {min(done + 1, total)} of {total}…",
+            ),
+        )
+        prog.empty()
         st.session_state.flashcards = deck
         st.session_state.flashcards_apkg = flashcards.build_apkg(deck) if deck else b""
         save_flashcards(st.session_state.get("run_id", ""), deck)

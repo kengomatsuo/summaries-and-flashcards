@@ -1,5 +1,207 @@
 [
   {
+    "id": "1d770966dc954953bdc75453d500872e",
+    "timestamp": "2026-06-08 10:37",
+    "files": [
+      "Thin-Film_Physics_260608.pdf"
+    ],
+    "model": "qwen2.5vl:3b",
+    "depth": "In-depth",
+    "proficiency": "Beginner",
+    "summary": "Three main topics:\n\n1. **Electrons in an atom**: This concept likely discusses the arrangement and behavior of electrons around the nucleus of an atom, including their energy levels and orbitals.\n2. **Lattice vibration**: This topic probably covers the movement or oscillation of atoms within a crystal lattice structure, which is important for understanding materials science and solid-state physics.\n3. **Free electron model**: In this model, electrons are considered to be free from the constraints of an atom's nucleus, moving throughout a material as if they were in a vacuum. This concept is fundamental in explaining electrical conductivity in metals.\n\nThese concepts relate to each other because they all contribute to our understanding of how materials behave at different scales: atomic structure (electrons in atoms), crystalline structures (lattice vibrations), and the behavior of electrons within those structures (free electron model).\n\n---\n\nThe concept of energy bands in crystals, focusing on how the introduction of periodic potentials affects electron behavior. The free electron model was discussed, which shows electrons moving along a line with arrows indicating their movement or excitation. This is represented visually by an arrow pointing to the right.\n\nAdditionally, the electronic structure section depicted horizontal lines representing different energy bands within the crystal. These energy bands have arrows at their topmost and bottommost positions, indicating direction. The specific heat and electrical conductivity of materials such as metals, semiconductors, and insulators were also discussed in relation to these energy bands.\n\nThe lecture used an implicit equation from the free electron model: $ V(x) = \\frac{1}{2m} \\left( \\frac{\\partial^2}{\\partial x^2} + \\frac{\\partial^2}{\\partial y^2} + \\frac{\\partial^2}{\\partial z^2} \\right) $, where $ m $ is the mass of an electron and $ x, y, z $ are spatial coordinates. This equation describes the potential energy within a free electron model.\n\n---\n\nSeveral key concepts related to wave behavior:\n\n- **Wavelength** refers to the distance between successive crests or troughs of a wave.\n- An **incident wave** is the initial wave that enters an area.\n- A **reflected wave** occurs when part of the incident wave bounces back after hitting a boundary.\n- The **interatomic distance** is the average distance between atoms in a material.\n- There is a condition for waves to intensify, which involves path difference and interatomic distances.\n- **Path difference** refers to the difference in the paths taken by two waves from their sources to a point of observation.\n- The **wave number**, denoted as $ k $, is related to wavelength ($ \\lambda $) through the equations:\n  - $ 2a = n\\lambda $\n  - $ k = \\frac{2\\pi}{\\lambda} = \\frac{n\\pi}{a} = \\frac{\\pi}{a} $\n\nThese concepts are illustrated in a diagram showing the relationship between incident and reflected waves.\n\n---\n\nStanding wave phenomena, specifically focusing on how waves behave at fixed ends versus free ends. The image includes a mathematical equation $ e^{-i\\frac{\\pi}{a}z} $ in the top left corner, which represents an exponential decay factor used to describe oscillatory behavior.\n\nTwo diagrams are presented: one for \"Fixed end reflection\" and another for \"Free end reflection.\" These diagrams illustrate how waves interact with different types of boundaries. In the diagram labeled \"Standing wave,\" a standing wave pattern is shown, characterized by nodes (points where displacement is zero) and antinodes (points where displacement is maximum). Arrows indicate the direction of wave propagation.\n\nThe concept of fixed end reflection involves a wave being reflected at an endpoint that does not allow for any movement. This results in a phase shift due to the boundary condition. In contrast, free end reflection occurs when a wave encounters an endpoint that allows for free motion or vibration. Here, the wave is typically transmitted through without significant phase change.\n\nThe standing wave phenomenon itself is explained as resulting from constructive interference between two waves traveling in opposite directions. This results in regions of maximum and minimum displacement along the medium.\n\n---\n\nThe relationship between electron energy ($E$) and wave number ($k$). The free electron model is represented by the equation $ E = \\frac{\\hbar^2}{2m} k^2 $, which forms a quadratic curve (parabola) on the graph. This model describes how electron energy depends solely on the square of the wave number.\n\nThe graph includes two curves: one labeled \"自由電子モデル\" (Free Electron Model) and another labeled \"エネルギーバンド\" (Energy Band). The free electron model curve is a parabolic shape, indicating that electron energy increases quadratically with wave number. \n\nThere are also two horizontal lines on the y-axis marked with Greek letters, representing specific values of $ k $ and their corresponding energies ($E$). These lines help to identify key points on the graph.\n\nA vertical line intersects the graph at a point where the wave number changes from negative to positive, labeled as $ U $. This intersection is significant because it marks a transition in the behavior of electron energy. \n\nThe space between the two curves represents an energy gap, which is important for understanding the structure and properties of materials described by this model. The energy band curve typically shows different energy levels or bands within a material.\n\nIn summary, the lecture focused on how electron energy varies with wave number using the free electron model, and how this relationship can be visualized graphically to understand the energy bands and gaps in materials.\n\n---\n\nThree types of materials based on their electrical conductivity: metal, semiconductor, and insulator. These materials can be distinguished by how well they conduct electricity:\n\n- **Metal** conducts electricity very easily due to the presence of free electrons in its atoms.\n- **Semiconductor** has a lower ability to conduct electricity compared to metals but can be manipulated to increase or decrease its conductivity through doping with other elements.\n- **Insulator** is a poor conductor of electricity, making it useful for preventing electrical leakage and maintaining insulation.\n\n---\n\nSeveral key concepts related to electronic structures of materials. The main topics included:\n\n1. **Free Electron Model**: This model describes electrons as being free to move throughout a material without any restrictions, behaving like particles with no specific energy levels or bands. Electrons in this model are assumed to have the same kinetic energy and occupy all available states within their potential well.\n\n2. **Tight Binding Model**: In contrast to the free electron model, the tight binding model considers electrons as being localized around individual atoms. These electrons can only move a short distance from their parent atom due to the attractive forces between them and neighboring atoms. This leads to the formation of energy bands where electrons are more likely to be found.\n\n3. **Hybridization**: This concept describes how atomic orbitals combine to form molecular orbitals, which is particularly important in understanding bonding in molecules and materials. Hybridized orbitals result from mixing different types of atomic orbitals (s, p, d) to create new hybrid states that can better fit the geometry of a molecule or material.\n\n4. **Atomic Orbital**: These are the fundamental quantum mechanical wave functions used to describe electrons within an atom. They represent the probability distribution of finding an electron at any point in space around the nucleus and are categorized into different types based on their shape (s, p, d) and orientation (p has two orientations: px, py, pz).\n\n5. **Actual Band Structure**: This refers to the real energy levels that electrons occupy within a material, taking into account factors such as lattice vibrations (phonons), electron-electron interactions, and external perturbations like temperature or applied electric fields. The actual band structure can differ from the idealized bands predicted by models like the free electron or tight binding model.\n\nThese concepts are interconnected in their description of electronic structures, with hybridization playing a crucial role in bridging atomic orbitals to molecular bonding, while the free electron and tight binding models provide simplified frameworks for understanding these interactions at different levels. The actual band structure then incorporates all these factors into a more realistic picture of how electrons behave within materials.\n\n---\n\nThe electronic orbital of a hydrogen atom. The key concepts discussed include electron kinetic energy, potential energy, and atomic energy. Atomic energy is described by the equation:\n\n\n$$\nE_{\\text{atomic}} = \\frac{1}{2m} (P_x^2 + P_y^2 + P_z^2) - \\frac{e^2}{4\\pi\\epsilon_0r}\n$$\n\n\nThe Hamiltonian operator, which encapsulates the total energy of a system including kinetic and potential energies, is given by:\n\n\n$$\n\\hat{H} = -\\frac{\\hbar^2}{2m} (\\frac{\\partial^2}{\\partial x^2} + \\frac{\\partial^2}{\\partial y^2} + \\frac{\\partial^2}{\\partial z^2}) - \\frac{e^2}{4\\pi\\epsilon_0r}\n$$\n\n\nThe energy $ E $ and the wave function $ \\phi $ of an electron in a hydrogen atom are obtained by solving Schrödinger's equation, which is represented as:\n\n\n$$\nE = \\hat{H}\\phi\n$$\n\n\nThese concepts relate to each other because the Hamiltonian operator combines both kinetic and potential energies into a single expression that can be used to find the energy levels of electrons in an atom. The wave function $ \\phi $ describes the probability distribution of finding the electron at different points in space, and it is derived from solving Schrödinger's equation with the Hamiltonian operator.\n\n---\n\nThe quantum mechanical description of a covalent bond using the hydrogen molecule ion (H2+). The key points are:\n\n- The energy levels and wave function of an electron in H2+ are obtained by solving Schrodinger's equation.\n- Schrodinger's equation for this system is given by:\n  $$\n  \\hat{H}\\phi = E\\phi\n  $$\n  where the Hamiltonian operator $\\hat{H}$ is:\n  $$\n  \\hat{H} = -\\frac{\\hbar^2}{2m}\\Delta - \\frac{e^2}{4\\pi\\varepsilon_0r_{1}} - \\frac{e^2}{4\\pi\\varepsilon_0r_{2}}\n  $$\n- The Hamiltonian includes the kinetic energy term, two repulsive Coulomb terms due to the positive charges of the hydrogen atoms (H), and a potential energy term for the electron's position.\n- The notation in the diagram represents two positively charged particles connected by a line with an electron between them.\n\n---\n\nThe concept of a covalent bond using tight-binding approximation. It describes how the wave function for an electron in hydrogen ion (H₂⁺) is expressed as a linear combination of atomic wave functions, specifically φ₁ and φ₂. The text states that the wave function φ is given by:\n\n$$\\phi = c_1φ₁ + c_2φ₂$$\n\nThe slide also mentions that this expression for the wave function in H₂⁺ is derived from solving for the coefficients $c_1$ and $c_2$.\n\n---\n\nTwo main steps involving complex conjugates. First, the complex conjugate of φ1 was multiplied from the left and then integrated. Second, the complex conjugate of φ2 was also multiplied from the left and then integrated. No equations or diagrams were present in this slide; only text instructions for these operations with complex conjugates were provided.\n\n---\n\nThe note states that the determinant should be 0 to have a meaningful solution. This concept is particularly relevant in solving systems of linear equations and determining whether there are unique solutions or no solutions. The determinant of a matrix associated with the system of equations can indicate the nature of the solution set:\n\n- If the determinant is non-zero, the system has a unique solution.\n- If the determinant is zero, the system either has infinitely many solutions or no solutions at all.\n\nThis summary directly reflects the information provided in the notes without adding any extraneous details.\n\n---\n\nFor a determinant to have a meaningful solution, its value should be 0.\n\n---\n\nThe notes provided contain basic terms from chemistry, specifically focusing on quantum mechanics in atoms. Here is a summary based solely on the information given:\n\n- **Antibonding state** and **bonding state**: These are concepts related to atomic orbitals where an antibonding state has higher energy than its bonding counterpart due to having one more electron pair orbital node between the nuclei, making it less stable.\n  \n- **Covalent bond**: This is a type of chemical bond formed when atoms share electrons. The strength and stability of covalent bonds depend on whether they are in a bonding or antibonding state.\n\n- **Atom 1** and **Atom 2**: These refer to two different atoms involved in forming a molecule, where the term \"bonding\" indicates that these atoms are connected by sharing electrons through a covalent bond.\n\nThe text also mentions an equation involving $H_{11}$ and $H_{12}$ along with a parameter $S_{12}$. However, no further explanation or context is provided for this equation. The diagram labeled $\\varphi_1$ and $\\varphi_2$ appears to represent energy levels or orbitals of the atoms involved in bonding.\n\nIn summary, the notes discuss basic concepts related to atomic orbitals, covalent bonds, and their stability based on whether they are in a bonding or antibonding state.\n\n---\n\nThe \"結晶中で電子が感じる周期ポテンシャル\" (Periodic Potential in a Crystal) slide describes a periodic potential function $ V(r) $. This function is depicted in a diagram where four points labeled as $ R_{I-1} $, $ R_I $, $ R_{I+1} $, and $ R_{I+2} $ are connected by dashed lines, representing the potential of atoms within a crystal structure. The periodic nature of this function means that each peak corresponds to the potential felt by electrons in different positions within the crystal lattice. \n\nThe overall potential experienced by an electron moving through the crystal is represented as a continuous curve extending from one peak to another, with annotations indicating the \"Potential of atom\" and \"Potential of crystal (molecule)\" for clarity. This diagram illustrates how electrons in a crystalline structure experience periodic potentials due to the arrangement of atoms within the crystal.\n\n---\n\nThe electronic structure of semiconductors, focusing on hydrogen atoms and their molecular states. The energy levels were represented as -1s for both hydrogen atoms in a molecule. There was mention of covalent bonding and anti-bonding states, indicated by 4_1 + 4_2 for these states. No specific exercises or formulas were provided in the notes.\n\n---\n\nThe band structure of silicon (Si). It includes a diagram showing different energy levels or bands in silicon, labeled with \"3p\", \"3s\", \"2p\", \"2s\", and \"1s\". Each band is represented by arrows pointing upwards, indicating increasing energy levels. The annotations provide additional context about these bands, such as terms like \"anti-bonding\", \"conduction band\", \"valence electrons\", and \"inner shell electrons\". These terms are explained in relation to the different energy levels and their corresponding orbitals. The slide also mentions concepts like \"energy gap\" (band gap), which separates the valence band from the conduction band, and \"bonding\" states that can form between atoms. Terms such as \"禁制带\" (forbidden band) and \"低能带\" (low energy band) are used to describe specific types of bands in silicon.\n\n---\n\nCarrier generation in a metal. Carrier generation involves the movement of electrons from one energy level to another, creating both conduction electrons and holes. In silicon atoms, there are initially electrons ($S_i$) and holes in another configuration ($S_2$). When an electron is transferred from $S_1$ to $S_2$, a hole is created in the former state. The energy required for this transition is approximately 1.6 eV, corresponding to heat or light energy needed to create these carriers.\n\n---\n\nA diagram that illustrates several key concepts related to electron behavior in a system. The diagram includes:\n\n1. **Energy Levels**: Two horizontal lines represent two distinct energy levels, labeled as approximately $ \\sim 1 eV $.\n\n2. **Excitation State**: An upward arrow from the lower energy level to the upper energy level indicates that electrons can be excited from the lower energy level to the higher one. This state is referred to as \"excitation.\"\n\n3. **Covalent Bond**: A downward arrow from the upper energy level to a structure resembling two overlapping circles or dots represents covalent bond formation. The term \"covalent bond\" is written next to this structure.\n\n4. **Conduction Electron**: Another downward arrow from the lower energy level to another structure, which looks like two overlapping circles with one containing a dot, indicates conduction electrons. The term \"conduction electron\" is placed next to this structure.\n\n5. **Electrons**: Small red dots represent electrons moving between these states. Arrows show the flow of electrons from lower energy levels to higher ones during excitation and vice versa for conduction processes.\n\nThe diagram helps explain how electrons can transition between different energy levels through excitation or conduction, leading to covalent bonding.\n\n---\n\nThe wave function of an electron in a crystal can be described using Bloch's theorem. According to Bloch's theorem, the wave function $\\Phi_k(r)$ for an electron in a crystal lattice is given by:\n\n\n$$\n\\Phi_k(r) = \\cdots + e^{ik \\cdot r_{A(n-1)}} C_A \\phi_{A(n-1)} + e^{ik \\cdot r_{B(n-1)}} C_B \\phi_{B(n-1)}\n$$\n\n\n\n$$\n+ e^{ik \\cdot r_{A(n)}} C_A \\phi_{A(n)} + e^{ik \\cdot r_{B(n)}} C_B \\phi_{B(n)}\n$$\n\n\n\n$$\n\\cdots + e^{ik \\cdot r_{A(n+1)}} C_A \\phi_{A(n+1)} + e^{ik \\cdot r_{B(n+1)}} C_B \\phi_{B(n+1)} + \\cdots\n$$\n\n\nHere, $r_{A(n-1)}$, $r_{B(n-1)}$, $r_{A(n)}$, and $r_{B(n)}$ represent the positions of atoms in the crystal lattice. The coefficients $C_A$ and $C_B$ are complex numbers that describe the amplitude of the wave function at these atomic positions, and $\\phi_{A(n-1)}$, $\\phi_{B(n-1)}$, $\\phi_{A(n)}$, and $\\phi_{B(n)}$ represent the Bloch functions associated with these atoms. The term $e^{ik \\cdot r}$ is a phase factor that accounts for the periodicity of the crystal lattice, where $k$ is the wave vector and $r$ is the position in space.\n\n---\n\nThe image depicts three circles labeled A, B, and C. Circle A is labeled with φ_A, and circle B is labeled with φ_B. The overlapping area between circles A and B is shaded to represent an interaction or state. This overlapping area is specifically noted as containing both \"Anti-bonding state\" and \"Bonding state.\" \n\nIn this context:\n- φ_A and φ_B are likely representing different states of a system, such as molecular orbitals.\n- The bonding state refers to the stable, energetically lower energy state where electrons tend to occupy regions of overlap between atomic orbitals from different atoms in a molecule.\n- The anti-bonding state is the higher energy state that occurs when there is no direct overlap or interaction between these orbitals. This results in a system with less stability compared to the bonding state.\n\nThe image visually distinguishes between these two states based on their interaction, with the overlapping area indicating where electrons can be found and thus affecting the overall energy level of the molecule.\n\n---\n\nSeveral mathematical expressions related to quantum mechanics concepts. The first equation involves an operator $\\hat{H}$ acting on a function $\\phi_k(r)$, resulting in the same function multiplied by an energy $E$. This suggests that $\\phi_k(r)$ is an eigenfunction of the operator $\\hat{H}$ with eigenvalue $E$.\n\nThe second and third equations are part of a system where two coefficients, $C_A$ and $C_B$, along with their respective energies $E_A$ and $E_B$, interact through complex exponential terms. These equations suggest that the system is in a state where these coefficients balance each other out to satisfy the equation provided.\n\nThe text \"已得之\" (translated as \"I have obtained it\") indicates that the solutions or derivations for these equations are complete, summarizing the lecture's content on this topic.\n\n---\n\nSeveral equations related to quantum mechanical states and their expectation values with respect to a Hamiltonian operator, denoted as $\\hat{H}$. These equations describe different states and their corresponding energy levels.\n\nFirstly, it is stated that the expectation value of the Hamiltonian for state $\\phi_{A(n)}$ is $E_A$, which represents the energy associated with this quantum state. Similarly, the expectation value of the Hamiltonian for state $\\phi_{B(n)}$ is $E_B$. \n\nAdditionally, there are two cross terms involving states $\\phi_{B(n)}$ and $\\phi_{A(n-1)}$: \n1. The expectation value of the Hamiltonian from state $\\phi_{B(n)}$ to state $\\phi_{A(n-1)}$ is denoted as $t$, and this is equal to the expectation value of the Hamiltonian from state $\\phi_{A(n-1)}$ to state $\\phi_{B(n)}$. \n2. The expectation value of the Hamiltonian from state $\\phi_{A(n)}$ to state $\\phi_{B(n)}$ is denoted as $t^*$, and this is equal to the expectation value of the Hamiltonian from state $\\phi_{A(n+1)}$ to state $\\phi_{B(n)}$. \n\nFinally, it is mentioned that the overlap between a state $\\phi_{A(n)}$ and itself is 1, which means that the probability of finding the system in state $\\phi_{A(n)}$ when it starts in state $\\phi_{A(n)}$ is 1. Similarly, the overlap between state $\\phi_{B(n)}$ and itself is also 1.\n\nIn summary, these equations describe different transitions and overlaps within quantum states, with specific values for energy expectation and overlap probabilities.\n\n---\n\nAn energy band structure with a focus on the band gap between two bands. The diagram illustrates three main regions:\n\n1. **Energy Band of Bonding States:** This region is represented by a downward curve, indicating lower energy levels.\n2. **Bonding of Bonding States:** This area shows overlapping peaks and troughs, representing interactions between bonding states.\n3. **Anti-bonding of Bonding States:** This section displays an upward curve with higher energy levels compared to the bonding state region.\n\nThe diagram includes specific points labeled as $ E_A $ (maximum energy level in the anti-bonding band) and $ E_B $ (minimum energy level in the bonding band). The band gap is between these two bands.\n\n---\n\nSeveral key concepts related to electronic structures of materials. The main topics included:\n\n1. **Free Electron Model**: This model describes electrons as being free to move throughout a material without any restrictions, behaving like particles with no specific energy levels or bands. Electrons in this model are assumed to have the same kinetic energy and occupy all available states within their potential well.\n\n2. **Tight Binding Model**: In contrast to the free electron model, the tight binding model considers electrons as being localized around individual atoms. These electrons can only move a short distance from their parent atom due to the attractive forces between them and neighboring atoms. This leads to the formation of energy bands where electrons are more likely to be found.\n\n3. **Hybridization**: This concept describes how atomic orbitals combine to form molecular orbitals, which is particularly important in understanding bonding in molecules and materials. Hybridized orbitals result from mixing different types of atomic orbitals (s, p, d) to create new hybrid states that can better fit the geometry of a molecule or material.\n\n4. **Atomic Orbital**: These are the fundamental quantum mechanical wave functions used to describe electrons within an atom. They represent the probability distribution of finding an electron at any point in space around the nucleus and are categorized into different types based on their shape (s, p, d) and orientation (p has two orientations: px, py, pz).\n\n5. **Actual Band Structure**: This refers to the real energy levels that electrons occupy within a material, taking into account factors such as lattice vibrations (phonons), electron-electron interactions, and external perturbations like temperature or applied electric fields. The actual band structure can differ from the idealized bands predicted by models like the free electron or tight binding model.\n\nThese concepts are interconnected in their description of electronic structures, with hybridization playing a crucial role in bridging atomic orbitals to molecular bonding, while the free electron and tight binding models provide simplified frameworks for understanding these interactions at different levels. The actual band structure then incorporates all these factors into a more realistic picture of how electrons behave within materials.\n\n---\n\nThe exercise provided focuses on deriving two parameters, $c_A$ and $c_B$, by solving a system of simultaneous equations. The system is represented by a determinant equation:\n\n\n$$\n\\begin{vmatrix}\nE_A - E & t^* \\left( e^{i \\frac{k_a}{2}} + e^{-i \\frac{k_a}{2}} \\right) \\\\\nt \\left( e^{i \\frac{k_a}{2}} + e^{-i \\frac{k_a}{2}} \\right) & E_B - E\n\\end{vmatrix} = 0\n$$\n\n\nTo find meaningful solutions for $c_A$ and $c_B$, the determinant of this matrix must be zero. This condition ensures that the system has a non-trivial solution, which is necessary to derive the values of $c_A$ and $c_B$.\n\n---\n\nHow to express the electron energy as a function of $ k $. The formula for the electron energy is given by:\n\n\n$$\nE = \\frac{\\varepsilon_A + \\varepsilon_B}{2} \\pm \\sqrt{(\\varepsilon_A - \\varepsilon_B)^2 + |t|^2\\cos^2\\frac{kA}{2}}\n$$\n\n\nThe values provided in the text are:\n- $\\varepsilon_A = 3$\n- $\\varepsilon_B = 2$\n- $|t| = 1$\n\nUsing these values, we can substitute them into the equation to find the electron energy:\n\n\n$$\nE = \\frac{3 + 2}{2} \\pm \\sqrt{(3 - 2)^2 + 1^2\\cos^2\\frac{kA}{2}}\n$$\n\n\nSimplifying inside the square root:\n\n\n$$\nE = \\frac{5}{2} \\pm \\sqrt{1 + \\cos^2\\frac{kA}{2}}\n$$\n\n\nThis equation shows how the electron energy depends on $ k $. The slide also mentioned plotting this energy band as a function of $ k $, assuming the same values for $\\varepsilon_A$, $\\varepsilon_B$, and $|t|$.\n\nIn summary, the electron energy is expressed in terms of $ k $ using the provided parameters, and its dependence on $ k $ can be visualized through a plot.",
+    "group_labels": [
+      "Electrons in an atom",
+      "Energy band in crystals : Effect of intr",
+      "wavelength",
+      "Standing wave",
+      "自由電子モデル",
+      "metal",
+      "Free electron model",
+      "Electronic orbital of a hydrogen atom",
+      "Covalent bond",
+      "強結合近似（Tight-Binding Approximation)",
+      "Multiply complex conjugate of φ1 from le",
+      "Determinant should be 0 to have a meanin",
+      "Determinant should be 0 to have a meanin",
+      "Antibonding state",
+      "結晶中で電子が感じる周期ポテンシャル",
+      "半導体。H2O構造、電子構造 Electronic structure of s",
+      "The image contains a slide from a lectur",
+      "Carrier generation",
+      "The image contains a diagram with the fo",
+      "Wave function",
+      "Bonding state",
+      "The image contains a slide from a lectur",
+      "Other terms are 0.",
+      "Energy band",
+      "Free electron model",
+      "Exercise",
+      "Show that the electron energy can be exp"
+    ],
+    "flashcards": [
+      {
+        "q": "What is the arrangement and behavior of electrons around an atom's nucleus?",
+        "a": "Electrons in an atom are arranged in energy levels and orbitals, moving around the nucleus with specific energies."
+      },
+      {
+        "q": "How do atoms within a crystal lattice move or oscillate?",
+        "a": "Lattice vibration involves the movement or oscillation of atoms within a crystal lattice structure."
+      },
+      {
+        "q": "What does the free electron model describe about electrons in materials?",
+        "a": "The free electron model considers electrons as free from atomic constraints, moving throughout a material as if they were in a vacuum."
+      },
+      {
+        "q": "What does the free electron model represent?",
+        "a": "Electrons moving along a line with arrows indicating their movement or excitation"
+      },
+      {
+        "q": "How is the electronic structure of crystals represented?",
+        "a": "By horizontal lines representing different energy bands within the crystal"
+      },
+      {
+        "q": "What do the arrows in the topmost and bottommost positions of energy bands indicate?",
+        "a": "Direction"
+      },
+      {
+        "q": "What does the lecture's implicit equation describe?",
+        "a": "'V(x) = \\frac{1}{2m} \\left( \\frac{\\partial^2}{\\partial x^2} + \\frac{\\partial^2}{\\partial y^2} + \\frac{\\partial^2}{\\partial z^2} \\right)' describes the potential energy within a free electron model"
+      },
+      {
+        "q": "What is the lecture's implicit equation?",
+        "a": "'V(x) = \\frac{1}{2m} \\left( \\frac{\\partial^2}{\\partial x^2} + \\frac{\\partial^2}{\\partial y^2} + \\frac{\\partial^2}{\\partial z^2} \\right)'"
+      },
+      {
+        "q": "What is wavelength?",
+        "a": "Wavelength refers to the distance between successive crests or troughs of a wave."
+      },
+      {
+        "q": "What happens when part of an initial wave bounces back after hitting a boundary?",
+        "a": "A reflected wave occurs."
+      },
+      {
+        "q": "What is path difference?",
+        "a": "Path difference refers to the difference in the paths taken by two waves from their sources to a point of observation."
+      },
+      {
+        "q": "How are wavelength and wave number related?",
+        "a": "The wave number \\( k \\) is related to wavelength \\( \\lambda \\) through the equations: \\( 2a = n\\lambda \\), \\( k = \\frac{2\\pi}{\\lambda} \\), or \\( k = \\frac{n\\pi}{a} \\)."
+      },
+      {
+        "q": "What condition must be met for waves to intensify?",
+        "a": "The condition involves path difference and interatomic distances."
+      },
+      {
+        "q": "What happens at a fixed end reflection?",
+        "a": "A phase shift occurs due to the boundary condition."
+      },
+      {
+        "q": "How does a free end reflection differ from a fixed end reflection?",
+        "a": "In free end reflection, the wave is typically transmitted through without significant phase change."
+      },
+      {
+        "q": "What are nodes and antinodes in standing waves?",
+        "a": "Nodes are points where displacement is zero; antinodes are points where displacement is maximum."
+      },
+      {
+        "q": "How does a standing wave pattern form?",
+        "a": "Resulting from constructive interference between two waves traveling in opposite directions."
+      },
+      {
+        "q": "What mathematical equation represents an exponential decay factor used to describe oscillatory behavior?",
+        "a": "$ e^{-i\\frac{\\pi}{a}z} $"
+      },
+      {
+        "q": "What is the equation that describes electron energy in the free electron model?",
+        "a": "E = \\frac{\\hbar^2}{2m} k^2"
+      },
+      {
+        "q": "How does electron energy change with wave number according to the free electron model?",
+        "a": "Electron energy increases quadratically with the square of the wave number."
+      },
+      {
+        "q": "What shape does the graph of electron energy versus wave number take in the free electron model?",
+        "a": "A parabolic curve"
+      },
+      {
+        "q": "How are specific values of k and their corresponding energies represented on the graph?",
+        "a": "By horizontal lines on the y-axis marked with Greek letters"
+      },
+      {
+        "q": "What does a vertical line intersecting at the wave number change from negative to positive indicate?",
+        "a": "A transition in the behavior of electron energy."
+      },
+      {
+        "q": "What type of material conducts electricity very easily?",
+        "a": "Metal"
+      },
+      {
+        "q": "How do metals conduct electricity?",
+        "a": "Due to the presence of free electrons in its atoms."
+      },
+      {
+        "q": "What is a semiconductor?",
+        "a": "A material with lower conductivity than metals but can be manipulated for conductivity control."
+      },
+      {
+        "q": "Why are semiconductors useful?",
+        "a": "They can be manipulated through doping to increase or decrease their conductivity."
+      },
+      {
+        "q": "What type of material is poor at conducting electricity?",
+        "a": "Insulator"
+      },
+      {
+        "q": "What is the main characteristic of the Free Electron Model?",
+        "a": "Electrons are free to move throughout a material without any restrictions, behaving like particles with no specific energy levels or bands."
+      },
+      {
+        "q": "How does the Tight Binding Model differ from the Free Electron Model?",
+        "a": "In contrast to the free electron model, the tight binding model considers electrons as being localized around individual atoms."
+      },
+      {
+        "q": "What is Hybridization in the context of materials science?",
+        "a": "It describes how atomic orbitals combine to form molecular orbitals, important for understanding bonding in molecules and materials."
+      },
+      {
+        "q": "What are Atomic Orbitals used to describe?",
+        "a": "The probability distribution of finding an electron at any point in space around the nucleus within an atom."
+      },
+      {
+        "q": "What does Actual Band Structure account for besides lattice vibrations?",
+        "a": "It takes into account factors such as electron-electron interactions and external perturbations like temperature or applied electric fields."
+      },
+      {
+        "q": "What is the atomic energy equation?",
+        "a": "-\\\\frac{1}{2m} (P_x^2 + P_y^2 + P_z^2) - \\\\frac{e^2}{4\\pi\\epsilon_0r}"
+      },
+      {
+        "q": "What does the Hamiltonian operator represent in quantum mechanics?",
+        "a": "Total energy of a system including kinetic and potential energies"
+      },
+      {
+        "q": "How is the wave function related to Schrödinger's equation?",
+        "a": "Solving Schrödinger's equation with the Hamiltonian operator yields the wave function $\\phi$"
+      },
+      {
+        "q": "What does the atomic energy equation describe?",
+        "a": "The total energy of an electron in a hydrogen atom"
+      },
+      {
+        "q": "How is the kinetic and potential energies combined into the Hamiltonian operator?",
+        "a": "By combining \\\\(-\\\\frac{\\\\hbar^2}{2m} (\\\\frac{\\\\partial^2}{\\\\partial x^2} + \\\\frac{\\\\partial^2}{\\\\partial y^2} + \\\\frac{\\\\partial^2}{\\\\partial z^2})\\\\) and \\\\(-\\\\frac{e^2}{4\\pi\\epsilon_0r}\\\\)"
+      },
+      {
+        "q": "What is the Hamiltonian operator for H2+?",
+        "a": "-\\frac{\\hbar^2}{2m}\\Delta - \\frac{e^2}{4\\pi\\varepsilon_0r_{1}} - \\frac{e^2}{4\\pi\\varepsilon_0r_{2}}"
+      },
+      {
+        "q": "What does the Hamiltonian operator include?",
+        "a": "Kinetic energy term, two repulsive Coulomb terms, and a potential energy term for the electron's position."
+      }
+    ]
+  },
+  {
     "id": "278f3f7cdff44ca1800dc7511cc6c6c5",
     "timestamp": "2026-06-08 02:37",
     "files": [

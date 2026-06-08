@@ -126,20 +126,26 @@ def generate_cards(
     host: str = OLLAMA_HOST,
     max_per_topic: int = FLASHCARD_MAX_PER_TOPIC,
     max_total: int = FLASHCARD_MAX_TOTAL,
+    on_progress=None,
 ) -> list[tuple[str, str]]:
     """Generate a full deck of flashcards from all summary topic parts.
 
     Content-proportional: each topic yields one card per distinct fact (capped at
     `max_per_topic`), so a dense topic gives more cards and a thin one gives fewer.
     Cards are deduped by question across topics and the deck is capped at `max_total`.
+
+    `on_progress(done, total)` is called per topic for a progress bar.
     """
     from ollama import Client
 
     client = Client(host=host)
     seen: set[str] = set()
     cards: list[tuple[str, str]] = []
+    n = len(parts)
 
-    for part in parts:
+    for i, part in enumerate(parts):
+        if on_progress:
+            on_progress(i, n)
         if len(cards) >= max_total:
             break
         if not part.strip():
@@ -152,6 +158,8 @@ def generate_cards(
             cards.append((q, a))
             if len(cards) >= max_total:
                 break
+    if on_progress:
+        on_progress(n, n)
     return cards
 
 
@@ -191,6 +199,7 @@ _WIDGET_TEMPLATE = """<!DOCTYPE html>
   button:hover:not(:disabled) { background: #f3f3f3; }
   button:disabled { opacity: .4; cursor: default; }
   #counter { font-size: 13px; color: #666; min-width: 60px; text-align: center; }
+  #shuffle { margin-left: 10px; }
 </style></head>
 <body>
   <div id="wrap">
@@ -203,6 +212,7 @@ _WIDGET_TEMPLATE = """<!DOCTYPE html>
       <button id="prev">&lsaquo; Prev</button>
       <span id="counter"></span>
       <button id="next">Next &rsaquo;</button>
+      <button id="shuffle" title="Shuffle the deck">&#x21bb; Shuffle</button>
     </div>
   </div>
   <script>
@@ -212,6 +222,7 @@ _WIDGET_TEMPLATE = """<!DOCTYPE html>
     const q = document.getElementById('q'), a = document.getElementById('a');
     const counter = document.getElementById('counter');
     const prev = document.getElementById('prev'), next = document.getElementById('next');
+    const shuffle = document.getElementById('shuffle');
     function render() {
       card.classList.remove('flipped');
       q.innerHTML = cards[i][0];
@@ -223,6 +234,13 @@ _WIDGET_TEMPLATE = """<!DOCTYPE html>
     card.addEventListener('click', () => card.classList.toggle('flipped'));
     prev.addEventListener('click', () => { if (i > 0) { i--; render(); } });
     next.addEventListener('click', () => { if (i < cards.length - 1) { i++; render(); } });
+    shuffle.addEventListener('click', () => {
+      for (let k = cards.length - 1; k > 0; k--) {
+        const j = Math.floor(Math.random() * (k + 1));
+        [cards[k], cards[j]] = [cards[j], cards[k]];
+      }
+      i = 0; render();
+    });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft' && i > 0) { i--; render(); }
       else if (e.key === 'ArrowRight' && i < cards.length - 1) { i++; render(); }

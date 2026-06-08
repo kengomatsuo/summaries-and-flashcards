@@ -1,0 +1,1 @@
+{ "version": "0.0.1", "configurations": [ { "name": "cardprev", "runtimeExecutable": "/Users/hafang/Desktop/oss/.venv/bin/python", "runtimeArgs": ["-m","http.server","8816","--directory","/tmp/cardprev"], "port": 8816 } ] }

@@ -97,7 +97,7 @@ Pages/slides are joined with form-feed `\x0c`. This character is the segmentatio
 
 ## Pipeline (`summariesandflashcards/summarize.py`)
 
-`summarize_mapreduce()` is a generator that yields string tokens. Four sequential phases:
+`summarize_mapreduce()` is a generator that yields string tokens. Four sequential phases (the `0–100%` figures below are the *internal* progress range; `app.py` remaps them onto the back portion of the bar — see the progress note).
 
 ### Phase 0 — Segment (0 → 20%)
 
@@ -137,7 +137,11 @@ The write prompt does **not** ask the model to skip — Gate A (deterministic) i
 
 Groups are separated in the output stream by `\n\n---\n\n`. The DONE stage splits on this delimiter to populate tabs.
 
-Token cap: `options={"num_predict": 2000, "temperature": 0}` on every write call. Vision description calls use `{"num_predict": 1000, "temperature": 0}`. Skim and grouping calls also run at `temperature: 0`.
+Token cap: `options={"num_predict": 2000, "temperature": 0}` on every write call. Vision description calls use `{"num_predict": VISION_NUM_PREDICT (=400), "temperature": 0}`. Skim and grouping calls also run at `temperature: 0`.
+
+### Progress bar
+
+`app.py` splits the bar between extraction and summarisation by where the time goes: `extract_frac = 0.5` when the vision model runs (extraction is slow), else `0.15` (plain text extraction is near-instant). Extraction drives `0 → extract_frac` (per page); the `summarize_mapreduce` `on_progress` percentages (the `0–100%` above) are remapped to `extract_frac → 1.0` (`extract_frac + pct*(1-extract_frac)`), so the bar advances continuously and never jumps backward. Flashcard generation has its own bar (`generate_cards(on_progress=…)` → "topic X of N").
 
 ---
 
