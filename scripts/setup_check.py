@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from summariesandflashcards import ollama_client
-from summariesandflashcards.config import DEFAULT_MODEL, TEXT_MODEL
+from summariesandflashcards.config import DEFAULT_MODEL
 
 OK = "\033[32m✓\033[0m"
 FAIL = "\033[31m✗\033[0m"
@@ -35,12 +35,11 @@ def main() -> None:
 
     if up:
         models = ollama_client.list_models()
-        for required in (DEFAULT_MODEL, TEXT_MODEL):
-            all_ok &= check(
-                f"Required model '{required}' is installed",
-                required in models,
-                f"Run: ollama pull {required}",
-            )
+        all_ok &= check(
+            "At least one Ollama model is installed",
+            bool(models),
+            f"Run: ollama pull {DEFAULT_MODEL}",
+        )
         if models:
             print(f"\n  Installed models: {', '.join(models)}")
     else:

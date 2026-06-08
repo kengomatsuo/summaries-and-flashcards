@@ -93,31 +93,6 @@ def vision_prompt(existing_text: str = "") -> str:
     return base
 
 
-def skim_prompt(chunk: str) -> str:
-    """Skim a section: produce a short topic label and a 1-2 sentence context description."""
-    return (
-        "Analyse this lecture section. Use only words and facts that appear in it.\n\n"
-        "---\n\n"
-        + chunk
-        + "\n\n---\n\n"
-        "Reply in this exact format (two lines only):\n"
-        "TOPIC: <topic in 5 words or fewer, using terms exactly as they appear. If the section "
-        "has no teachable content — only a title, heading, step label, metadata, or image "
-        "caption — write exactly: (none)>\n"
-        "CONTEXT: <1 sentence describing the concepts, equations, or methods actually present. "
-        "If there is no teachable content, write exactly: none>"
-    )
-
-
-def adjacency_prompt(context_a: str, context_b: str) -> str:
-    """Decide if two consecutive sections belong to the same topic group."""
-    return (
-        f"Section A covers: {context_a}\n"
-        f"Section B covers: {context_b}\n\n"
-        "Answer 'yes' if: these sections cover the same topic, Section B is a direct continuation or next step of Section A, or Section A appears to be a title or heading that introduces Section B. Otherwise answer 'no'. Answer only 'yes' or 'no'."
-    )
-
-
 def summary_prompt(text: str, depth: str, proficiency: str = "Intermediate") -> str:
     """Full summary of a block of text — used for both single-chunk and per-group summaries."""
     instruction = DEPTH_INSTRUCTIONS.get(depth, DEPTH_INSTRUCTIONS["Concise"])

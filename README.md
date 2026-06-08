@@ -1,9 +1,15 @@
-# Summaries and Flashcards
+# Summaries and Flashcards (lite)
 
 AI-powered lecture notes summariser — fully local, no internet required, no paid API.
 
 Upload your notes (PDF, DOCX, PPTX, and more), get a faithful summary and
 exportable Anki flashcards — all running on your own machine.
+
+This is the **lite** edition: a single-pass summariser (one model call over the
+whole document) with a model picker, basic Streamlit UI, and flashcards. It is
+simplest to run and best for short-to-medium documents. For very long notes, the
+**standard** edition (chunked map-reduce pipeline with anti-hallucination gates)
+keeps quality higher.
 
 ---
 
@@ -54,19 +60,23 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ---
 
-## 2 — Pull the two required models
+## 2 — Pull a model
+
+You only need **one** model. Pick based on your notes:
 
 ```sh
-ollama pull qwen2.5vl:3b   # 3.2 GB — vision: reads equations, diagrams, images in slides
-ollama pull qwen2.5:3b     # 1.9 GB — text: writes the summaries
+# Recommended — vision: reads equations, diagrams, and images in slides/pages
+ollama pull qwen2.5vl:3b   # 3.2 GB
+
+# Or text-only — lighter, but image-only content (figures, hand-drawn equations) is skipped
+ollama pull qwen2.5:3b     # 1.9 GB
 ```
 
-You only need to do this once. The app uses a fixed pair: the vision model extracts
-content from slides/pages, then is unloaded and the text-only model writes the summary.
-The text-only model is a stronger instruction-follower than its vision sibling, and
-unloading the vision model first keeps peak RAM at ~3.2 GB (not the sum). There is no
-model picker in the app — these two names are set in `summariesandflashcards/config.py`
-(`DEFAULT_MODEL` and `TEXT_MODEL`).
+The app shows a **model picker** listing every model you have installed; the single
+model you select does both the extraction and the summary. A vision model is
+recommended for slide decks and scanned PDFs. The default selection is `qwen2.5vl:3b`
+(set as `DEFAULT_MODEL` in `summariesandflashcards/config.py`) — but any installed model works,
+and you can pull a larger one (e.g. `llava:7b`) if you have the RAM.
 
 ---
 
@@ -149,8 +159,7 @@ Expected output:
 Summaries and Flashcards — setup check
 
   ✓  Ollama server is running
-  ✓  Required model 'qwen2.5vl:3b' is installed
-  ✓  Required model 'qwen2.5:3b' is installed
+  ✓  At least one Ollama model is installed
 
   Installed models: qwen2.5:3b, qwen2.5vl:3b
 
@@ -204,8 +213,8 @@ Python 3.12 is the recommended version.
 **`zsh: command not found: ollama` / `ollama is not recognized`**
 Ollama is not installed or not on your PATH. Repeat step 1.
 
-**`Required model(s) not installed` warning in the app**
-Run `ollama pull qwen2.5vl:3b` and `ollama pull qwen2.5:3b`, then refresh the page.
+**`No Ollama models installed` error in the app**
+Pull at least one model, e.g. `ollama pull qwen2.5vl:3b`, then refresh the page.
 
 **Scanned / image-only PDFs produce no text**
 Use a vision-capable model (e.g. `qwen2.5vl:3b`). The app automatically rasterises

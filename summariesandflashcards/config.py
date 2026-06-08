@@ -1,13 +1,8 @@
 OLLAMA_HOST = "http://localhost:11434"
 
+# Default model pre-selected in the UI dropdown (the user can pick any installed
+# model — a vision model enables image/equation reading, a text-only model is lighter).
 DEFAULT_MODEL = "qwen2.5vl:3b"
-
-# Text model for the skim/group/write phases. A vision (VL) model is a weaker
-# instruction-follower than its text-only sibling of the same size, so when the
-# selected model is vision-capable we route the *text* phases here instead.
-# Falls back to the selected model if this is not installed. Pull with:
-#   ollama pull qwen2.5:3b
-TEXT_MODEL = "qwen2.5:3b"
 
 # Vision model detection — any installed model whose name contains one of
 # these substrings is treated as vision-capable.
@@ -28,14 +23,11 @@ SUGGESTED_VISION_MODELS = [
 # DPI used when rasterising a PDF page for the vision model.
 VISION_RASTER_DPI = 150
 
-# Vision speedups — fewer/cheaper vision calls (Ollama serialises requests, so
-# parallelism doesn't help; cutting work does).
-# Biggest lever: a vision model tiles an image into patches, so a large image is
+# Vision speedups — a vision model tiles an image into patches, so a large image is
 # much slower. Downscaling to VISION_MAX_PX before the call is ~4x faster at 512,
-# ~1.6x at 768, with negligible quality loss for slide/page content. Lower for
-# more speed; raise if dense equations/small text look blurry to the model.
+# ~1.6x at 768, with negligible quality loss for slide/page content.
 VISION_MAX_PX = 768
-VISION_NUM_PREDICT = 400   # token budget per image/page description (was 1000)
+VISION_NUM_PREDICT = 400   # token budget per image/page description
 MIN_IMAGE_PX = 128         # images smaller than this (max dimension) are decorative → skip vision
 BIG_IMAGE_PX = 300         # at/above this → always describe (figures, equation images)
 TEXT_RICH_WORDS = 40       # slide text word count above which supplementary images are skipped
@@ -46,25 +38,8 @@ SUPPORTED_EXTENSIONS = [
     "xml", "epub", "msg",
 ]
 
-# Approximate reading speed used for "minutes saved" calculation
-READING_WPM = 200
-
-# Chunking — max chars per chunk sent to the LLM, and overlap between chunks
-CHUNK_MAX_CHARS = 6000
-CHUNK_OVERLAP_CHARS = 400
-
-# Recursive reduce — max summaries per intermediate reduce batch
-GROUP_SIZE = 15
-
-# Hallucination gate: a topic group whose *teachable* word count (excluding file
-# headers, image captions, and "STEP n OF m" labels) is below this is NOT sent to
-# the writer — bare title/label/image slides make small models invent content.
-# Tune up to drop more aggressively, down to keep terser slides. Title slides in
-# this corpus run ~8–9 words; pipeline-step labels ("Result") run 1–3.
-MIN_GROUP_WORDS = 12
-
 # Flashcards — content-proportional generation (one card per distinct fact).
 # Per-topic ceiling guards a small model against padding a thin topic; the total
-# cap bounds deck size / generation time on a large summary.
+# cap bounds deck size / generation time.
 FLASHCARD_MAX_PER_TOPIC = 5
 FLASHCARD_MAX_TOTAL = 40

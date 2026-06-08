@@ -1,8 +1,9 @@
-"""Summaries and Flashcards — fully local lecture-notes summariser (basic Streamlit app).
+"""Summaries and Flashcards (lite) — fully local lecture-notes summariser (basic Streamlit app).
 
-Upload notes → summarise → optional Anki flashcards. Models/depth/level are fixed
-(see summariesandflashcards/config.py). The summarisation engine (gated pipeline, vision
-extraction, flashcard generation) lives in the summariesandflashcards package.
+Upload notes → summarise → optional Anki flashcards. You pick one installed model:
+a vision model (e.g. qwen2.5vl:3b) reads equations/diagrams/images in slides, a
+text-only model is lighter but skips image content. That single model does both the
+extraction and the summary. The engine lives in the summariesandflashcards package.
 """
 
 import re
@@ -11,7 +12,7 @@ import streamlit as st
 from ollama import Client
 
 from summariesandflashcards import ollama_client, ingest, summarize, flashcards
-from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, TEXT_MODEL, OLLAMA_HOST
+from summariesandflashcards.config import SUPPORTED_EXTENSIONS, DEFAULT_MODEL, OLLAMA_HOST
 from summariesandflashcards.ollama_client import is_vision_model
 
 _DEPTH = "In-depth"
@@ -29,29 +30,33 @@ def _fix_latex(text: str) -> str:
 
 st.set_page_config(page_title="Summaries and Flashcards", page_icon="📄")
 st.title("Summaries and Flashcards")
-st.caption("Local lecture-notes summariser.")
+st.caption("Lecture-notes summariser.")
 
 # ── Health check ──────────────────────────────────────────────────────────────
 if not ollama_client.is_up():
     st.error("Ollama is not running. Start it with `ollama serve`, then refresh.")
     st.stop()
 models = ollama_client.list_models()
-missing = [m for m in (DEFAULT_MODEL, TEXT_MODEL) if m not in models]
-if missing:
-    st.error("Required model(s) not installed: " + ", ".join(f"`{m}`" for m in missing)
-             + ". Pull with `ollama pull <name>`, then refresh.")
+if not models:
+    st.error("No Ollama models installed. Pull one with `ollama pull qwen2.5vl:3b`, then refresh.")
     st.stop()
 
-# ── Upload + summarise ────────────────────────────────────────────────────────
+# ── Model + upload ────────────────────────────────────────────────────────────
+default_idx = models.index(DEFAULT_MODEL) if DEFAULT_MODEL in models else 0
+model = st.selectbox("Model", models, index=default_idx)
+if is_vision_model(model):
+    st.caption("Vision model — reads equations, diagrams, and images in slides/pages.")
+else:
+    st.caption("Text-only model — lighter, but image-only content is skipped.")
+
 uploaded = st.file_uploader(
     "Upload notes (PDF, DOCX, PPTX, …)",
     type=SUPPORTED_EXTENSIONS, accept_multiple_files=True,
 )
 
 if uploaded and st.button("Summarise", type="primary"):
-    vision = is_vision_model(DEFAULT_MODEL)
+    vision = is_vision_model(model)
     vision_client = Client(host=OLLAMA_HOST) if vision else None
-    text_model = TEXT_MODEL if (vision and TEXT_MODEL in models) else DEFAULT_MODEL
 
     extracted: dict[str, str] = {}
     with st.spinner("Extracting text…"):
@@ -59,7 +64,7 @@ if uploaded and st.button("Summarise", type="primary"):
             try:
                 extracted[f"File {i + 1} of {len(uploaded)}: {f.name}"] = ingest.extract_text(
                     f.name, f.getvalue(),
-                    vision_model=DEFAULT_MODEL if vision else "", client=vision_client,
+                    vision_model=model if vision else "", client=vision_client,
                 )
             except Exception as exc:
                 st.warning(f"Could not extract {f.name}: {exc}")
@@ -69,16 +74,17 @@ if uploaded and st.button("Summarise", type="primary"):
         st.stop()
 
     combined = "\n\n---\n\n".join(f"# {name}\n\n{text}" for name, text in extracted.items())
-    if vision_client and text_model != DEFAULT_MODEL:
-        try:  # free the vision model before the text model loads (low-RAM friendly)
-            vision_client.chat(model=DEFAULT_MODEL, messages=[], keep_alive=0)
-        except Exception:
-            pass
 
-    with st.spinner("Summarising…"):
-        summary = "".join(summarize.summarize_mapreduce(combined, text_model, _DEPTH, _LEVEL))
-    st.session_state.summary = _fix_latex(summary)
+    st.subheader("Summary")
+    summary = _fix_latex(
+        st.write_stream(summarize.summarize_stream(combined, model, _DEPTH, _LEVEL))
+    )
+    st.session_state.summary = summary
+    st.session_state.model = model
     st.session_state.pop("cards", None)
+    # The stream above is transient; rerun so the Results block below is the single
+    # source of truth (avoids rendering the summary twice in this pass).
+    st.rerun()
 
 # ── Results ───────────────────────────────────────────────────────────────────
 if "summary" in st.session_state:
@@ -90,9 +96,11 @@ if "summary" in st.session_state:
 
     st.subheader("Flashcards")
     if st.button("Generate flashcards"):
-        parts = [p.strip() for p in summary.split("\n\n---\n\n") if p.strip()]
+        parts = [p.strip() for p in summary.split("\n\n") if p.strip()]
         with st.spinner("Generating flashcards…"):
-            st.session_state.cards = flashcards.generate_cards(parts)
+            st.session_state.cards = flashcards.generate_cards(
+                parts, model=st.session_state.get("model", model),
+            )
 
     cards = st.session_state.get("cards")
     if cards:

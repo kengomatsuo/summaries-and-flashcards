@@ -18,7 +18,7 @@ import genanki
 
 from summariesandflashcards.config import (
     OLLAMA_HOST,
-    TEXT_MODEL,
+    DEFAULT_MODEL,
     FLASHCARD_MAX_PER_TOPIC,
     FLASHCARD_MAX_TOTAL,
 )
@@ -119,7 +119,7 @@ def _generate_for_text(client, model: str, text: str, n: int) -> list[tuple[str,
 
 def generate_cards(
     parts: list[str],
-    model: str = TEXT_MODEL,
+    model: str = DEFAULT_MODEL,
     host: str = OLLAMA_HOST,
     max_per_topic: int = FLASHCARD_MAX_PER_TOPIC,
     max_total: int = FLASHCARD_MAX_TOTAL,
