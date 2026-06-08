@@ -4,17 +4,19 @@ Summaries and Flashcards is built on open-source software. This file credits eve
 dependency tree. The "Scope" column marks whether a package is a **direct** dependency
 (listed in `requirements.txt`) or a **transitive** one (pulled in automatically).
 
-Generated: 2026-06-06 · Python 3.12.10 · .venv verified
+Generated: 2026-06-08 · Python 3.12.10 · licences verified from installed package metadata
 
 ---
 
 ## ⚠ Licence notes
 
-All packages are permissively licensed (MIT, BSD, Apache-2.0, MPL-2.0 or compatible).
-One package in the transitive tree carries an LGPL notice:
+Dependencies are open-source. Most are permissively licensed (MIT, BSD, Apache-2.0,
+MPL-2.0 or compatible); three carry copyleft notices, detailed below — one of which
+(PyMuPDF) is a **direct** dependency.
 
 | Package | License | Notes |
 |---|---|---|
+| `pymupdf` (PyMuPDF) | AGPL-3.0 **or** Artifex Commercial (dual) | **Direct dependency** — PDF text extraction and page rasterisation in `ingest.py`. AGPL-3.0 is strong copyleft. For this app's use (a locally-run desktop tool the end user installs via pip, used unmodified, not offered as a hosted network service) the AGPL §13 network-use clause is not triggered. If you ever host this app as a public service, ship a modified PyMuPDF, or require a permissive-only tree, switch PDF handling to `pypdfium2` (BSD/Apache, already present in the tree) or obtain Artifex's commercial licence. |
 | `frozendict` | LGPL v3 | Transitive dep of `genanki`. LGPL requires that *the library itself* remain modifiable by end-users; it does **not** require our project to become LGPL. Because it is installed as a standard pip package (dynamically linked), this is compliant with no extra action required. |
 | `certifi` | MPL-2.0 | Transitive dep of `requests`. Mozilla Public License 2.0 is file-level copyleft; unmodified distribution (pip install) is compliant. |
 
@@ -38,13 +40,21 @@ distributed with Summaries and Flashcards. Users install it independently from h
 | streamlit | 1.58.0 | Apache-2.0 | Snowflake Inc \<hello@streamlit.io\> | https://streamlit.io |
 | markitdown | 0.1.6 | MIT | Adam Fourney, Microsoft | https://github.com/microsoft/markitdown |
 | ollama (Python client) | 0.6.2 | MIT | hello@ollama.com | https://ollama.com |
-| plotly | 6.8.0 | MIT | Chris P, Plotly Inc | https://plotly.com/python/ |
+| pymupdf (PyMuPDF) | 1.27.2 | AGPL-3.0 OR Artifex Commercial | Artifex Software, Inc. | https://github.com/pymupdf/PyMuPDF |
+| python-pptx | 1.0.2 | MIT | Steve Canny | https://github.com/scanny/python-pptx |
+| pillow | 12.2.0 | MIT-CMU | Jeffrey A. Clark (Alex) | https://github.com/python-pillow/Pillow |
+| markdown | 3.10.2 | BSD-3-Clause | Manfred Stienstra, Yuri Takhteyev | https://python-markdown.github.io |
+| latex2mathml | 3.81.0 | MIT | Ronie Martinez | https://github.com/roniemartinez/latex2mathml |
 | genanki | 0.13.1 | MIT | Kerrick Staley | https://github.com/kerrickstaley/genanki |
-| tiktoken | 0.13.0 | MIT | Shantanu Jain, OpenAI | https://github.com/openai/tiktoken |
 
 ---
 
 ## Full transitive dependency tree
+
+This is a snapshot of the full-featured environment (the `main` branch). The exact set
+varies slightly by branch and platform — a minimal `standard`/`lite` install pulls a
+subset — but every package below is permissively licensed except where noted in the
+licence notes above. Direct dependencies are listed in the table above, not here.
 
 | Package | Version | License | Author |
 |---|---|---|---|
@@ -92,7 +102,6 @@ distributed with Summaries and Flashcards. Users install it independently from h
 | pandas | 3.0.3 | BSD-3-Clause | Pandas Development Team |
 | pdfminer.six | 20251230 | MIT | Yusuke Shinyama, Pieter Marsman |
 | pdfplumber | 0.11.9 | MIT | Jeremy Singer-Vine |
-| pillow | 12.2.0 | MIT-CMU | Jeffrey A. Clark (Alex) |
 | protobuf | 7.35.0 | BSD-3-Clause | Google |
 | pyarrow | 24.0.0 | Apache-2.0 | Apache Arrow authors |
 | pycparser | 3.0 | BSD-3-Clause | Eli Bendersky |
@@ -103,7 +112,6 @@ distributed with Summaries and Flashcards. Users install it independently from h
 | python-dateutil | 2.9.0.post0 | Apache-2.0 AND BSD | Gustavo Niemeyer, Paul Ganssle |
 | python-dotenv | 1.2.2 | BSD-3-Clause | Saurabh Kumar |
 | python-multipart | 0.0.32 | Apache-2.0 | Andrew Dunham |
-| python-pptx | 1.0.2 | MIT | Steve Canny |
 | PyYAML | 6.0.3 | MIT | Kirill Simonov |
 | referencing | 0.37.0 | MIT | Julian Berman |
 | regex | 2026.5.9 | Apache-2.0 AND CNRI-Python | Matthew Barnett |

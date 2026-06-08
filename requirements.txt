@@ -1,11 +1,9 @@
 streamlit==1.58.0
 markitdown[pdf,docx,pptx,xlsx,xls,outlook]==0.1.6
 ollama==0.6.2
-plotly==6.8.0
 genanki==0.13.1
 markdown==3.10.2
 latex2mathml==3.81.0
-tiktoken==0.13.0
 pymupdf
 python-pptx
 pillow

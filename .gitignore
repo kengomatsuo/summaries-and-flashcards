@@ -3,3 +3,5 @@
 **/.DS_Store
 logs/
 debug_*.txt
+__pycache__
+history.json
