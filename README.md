@@ -201,6 +201,9 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
 | Streamlit | 1.58.0 | 3.10 | 3.14 |
 | MarkItDown | 0.1.6 | 3.10 | 3.13 |
 | ollama (client) | 0.6.2 | 3.8 | — |
+| PyMuPDF | 1.27.2 | 3.10 | — |
+| python-pptx | 1.0.2 | 3.8 | — |
+| Pillow | 12.2.0 | 3.10 | — |
 | genanki | 0.13.1 | 3.6 | — |
 
 The combined floor is **Python 3.10**; the combined ceiling is **Python 3.13**.
