@@ -30,7 +30,7 @@ _LEVEL = "Beginner"
 
 _RESULT_KEYS = (
     "file_data", "last_summary", "group_labels",
-    "run_id", "flashcards", "flashcards_apkg",
+    "run_id", "flashcards", "flashcards_apkg", "gen_flashcards",
 )
 
 _DISPLAY_MATH_RE = re.compile(r"\\\[\s*(.*?)\s*\\\]", re.DOTALL)
@@ -153,10 +153,13 @@ def _require_ready() -> list[str]:
 
 # ── Sidebar (persistent shell) ───────────────────────────────────────────────
 def render_sidebar() -> None:
+    # Lock navigation while a run is working, so the user can't leave the live
+    # view and get stuck unable to return (the pipeline is synchronous).
+    busy = bool(st.session_state.get("stage") == "running" or st.session_state.get("gen_flashcards"))
     with st.sidebar:
         st.markdown("## Summaries and Flashcards")
 
-        if st.button("＋  New summary", use_container_width=True):
+        if st.button("＋  New summary", use_container_width=True, disabled=busy):
             _reset()
             st.rerun()
 
@@ -173,7 +176,7 @@ def render_sidebar() -> None:
                 running = not run.get("summary")  # placeholder from start_run
                 label = _files_label(run["files"])
                 if running:
-                    # In-progress: shown immediately, not yet viewable.
+                    # The current in-progress run — shown, not navigable.
                     st.button(
                         f"{label}  ·  …", key=f"lib_{i}",
                         use_container_width=True, disabled=True,
@@ -181,7 +184,7 @@ def render_sidebar() -> None:
                 elif st.button(
                     label,
                     key="lib_active" if is_active else f"lib_{i}",
-                    use_container_width=True,
+                    use_container_width=True, disabled=busy,
                 ):
                     _load_run(run)
                     st.rerun()
@@ -374,11 +377,11 @@ def render_done() -> None:
             with st.container(key="dl_menu"):
                 st.download_button(
                     "Markdown (.md)", data=summary, file_name="summary.md",
-                    mime="text/markdown", use_container_width=True,
+                    mime="text/markdown", on_click="ignore", use_container_width=True,
                 )
                 st.download_button(
                     "Plain text (.txt)", data=summary, file_name="summary.txt",
-                    mime="text/plain", use_container_width=True,
+                    mime="text/plain", on_click="ignore", use_container_width=True,
                 )
 
     tab_summary, tab_cards = st.tabs(["Summary", "Flashcards"])
@@ -418,16 +421,24 @@ def _render_flashcards(parts: list[str]) -> None:
         )
         return
 
-    if st.button("Generate flashcards", type="primary", use_container_width=True):
+    # Two-phase so the sidebar locks before the (blocking) generation: the click
+    # sets a flag and reruns; the rerun disables nav, then this branch generates.
+    if st.session_state.get("gen_flashcards"):
         with st.spinner("Generating flashcards…"):
             deck = flashcards.generate_cards(parts)
         st.session_state.flashcards = deck
         st.session_state.flashcards_apkg = flashcards.build_apkg(deck) if deck else b""
         save_flashcards(st.session_state.get("run_id", ""), deck)
+        st.session_state.pop("gen_flashcards", None)
         if deck:
             st.rerun()
         else:
             st.warning("Couldn't generate flashcards from this summary.")
+        return
+
+    if st.button("Generate flashcards", type="primary", use_container_width=True):
+        st.session_state.gen_flashcards = True
+        st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
