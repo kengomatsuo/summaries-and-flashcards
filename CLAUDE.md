@@ -52,3 +52,7 @@ This applies to every non-trivial change. The only exception is a fix so small a
   don't import.
 - **Never track runtime/junk.** `history.json`, `logs/`, `__pycache__`, `debug_*.txt`
   are gitignored — don't commit them.
+- **Keep the app's own look.** The theme is minimal monochrome (white, near-black,
+  Georgia headings) in `.streamlit/config.toml`; evolve that. Never apply the Matsuo
+  Kengo portfolio brand (`matsuokengo-design`) here: the owner treats this as its own
+  tool, not a branded product.
